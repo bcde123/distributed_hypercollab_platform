@@ -1,11 +1,3 @@
-Good call 👍
-Before touching code, **freezing the feature list** is exactly what real teams do.
-
-Below is a **clean, final, placement-safe feature list**, divided into **Core (must-have)** and **Advanced (bonus)**.
-If you build **only Core properly**, your project is already **top-tier**.
-
----
-
 # ✅ HyperCollab – Final Feature List
 
 ## 🟢 CORE FEATURES (Must Build – Non-Negotiable)
