@@ -1,0 +1,13 @@
+# Node
+node_modules/
+dist/
+.env
+
+# C++
+build/
+*.o
+*.exe
+bin/
+
+# System
+.DS_Store
