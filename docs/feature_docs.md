@@ -1,11 +1,5 @@
 # ✅ HyperCollab – Final Feature List
 
-## 🟢 CORE FEATURES (Must Build – Non-Negotiable)
-
-These define the project. **Do not skip any of these.**
-
----
-
 ## 1️⃣ Authentication & Authorization
 
 **Why it matters:** Security + backend fundamentals
@@ -212,29 +206,3 @@ These waste time for placements:
 | Optional       | Only if extra time |
 
 ---
-
-## 🎯 Golden Rule (IMPORTANT)
-
-> **A complete, working core system beats half-done fancy features.**
-
-If someone asks:
-
-> “Why didn’t you add X?”
-
-You answer:
-
-> “We intentionally prioritized scalability, correctness, and real-time reliability.”
-
-That’s a **senior-level answer**.
-
----
-
-### Next Logical Step
-
-Now that features are frozen, next we should:
-1️⃣ Finalize **DB schema**
-2️⃣ Finalize **event types**
-3️⃣ Lock **API contracts**
-4️⃣ Freeze **real-time message format**
-
-Tell me what you want to finalize next, and we’ll lock it properly 💪
