@@ -1,19 +1,6 @@
-Perfect. Now that the **feature list is frozen**, here’s a **clear, realistic 6-week plan** for **two people**, where **both of you learn MERN + C++ + Kafka**, and **nothing critical slips**.
-
-I’ll keep it **engineering-real**, not motivational fluff.
-
----
 
 # 🗓️ HyperCollab – Final 6-Week Execution Plan (2 People)
 
-**Constraints baked in:**
-
-* You already know **basic MERN**
-* You are **new to C++, Kafka, Redis**
-* Max time = **1.5 months**
-* Goal = **finish + learn + interview-safe**
-
----
 
 ## 🧱 WEEK 1 — Core Foundation (MERN Fast Track)
 
@@ -229,36 +216,4 @@ I’ll keep it **engineering-real**, not motivational fluff.
 | Dashboard        | 5    |
 | Docker + Deploy  | 6    |
 
----
 
-## 🚨 Scope Safety Rules (Very Important)
-
-If you fall behind:
-
-* ❌ Skip advanced Kafka tuning
-* ❌ Skip autoscaling
-* ❌ Skip CRDT / OT
-* ✅ Keep analytics simple
-* ✅ Keep real-time stable
-
-**Finish > Fancy**
-
----
-
-## 🎯 What You’ll BOTH Be Able to Say in Interviews
-
-> “I worked across MERN and C++ services, built real-time systems, and implemented event-driven analytics.”
-
-That sentence alone beats 90% of resumes.
-
----
-
-### Next Step (Recommended)
-
-Now we should **freeze technical contracts**, in this order:
-1️⃣ DB schema
-2️⃣ Event types (Kafka)
-3️⃣ WebSocket message format
-4️⃣ API endpoints
-
-Tell me which one you want to lock next, and we’ll do it properly 💪
