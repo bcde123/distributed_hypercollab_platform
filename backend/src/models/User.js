@@ -58,14 +58,14 @@ const userSchema = new Schema({
             enum: ['light', 'dark', 'system'],
             default: 'system'
         }
-        },isActive: {
-            type: Boolean,
-            default: true
-        },
-        lastLogin: {
-            type: Date
-        }
-    }, {
+    },
+    isActive: {
+        type: Boolean,
+        default: true
+    },
+    lastLogin: {
+        type: Date
+    },
     timestamps: true,
     toJSON: {
         virtuals: true

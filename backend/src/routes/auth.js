@@ -7,7 +7,7 @@ const { generateToken } = require('../utils/tokenGenerator');
 router.post('/register', async (req, res) => {
     try {
         const { username, email, password } = req.body;
-        const newUser = new User({ username, email,passwordHash: password });
+        const newUser = new User({ username, email, password });
         await newUser.save();
 
         // Token generated immediately after registration
