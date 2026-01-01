@@ -1,0 +1,30 @@
+const jwt = require('jsonwebtoken');
+
+const ACCESS_TOKEN_TTL = '15m'; // 15 minutes
+const REFRESH_TOKEN_TTL = '7d'; // 7 days
+const RESET_PASSWORD_TOKEN_TTL = 7*24*60*60; // 7 days in seconds
+
+const generateToken = async (user) => {
+    // Payload for access token
+    const accessPayload = {
+        userId: user._id,
+        email: user.email,
+        username: user.username
+    };
+    // sign access token
+    const accessToken = jwt.sign(
+        accessPayload, 
+        process.env.ACCESS_TOKEN_SECRET, 
+        { expiresIn: ACCESS_TOKEN_TTL }
+    );
+    // sign refresh token
+    const refreshToken = jwt.sign(
+        { userId: user._id }, 
+        process.env.REFRESH_TOKEN_SECRET, 
+        { expiresIn: REFRESH_TOKEN_TTL }
+    );
+    
+    return { accessToken, refreshToken };
+};
+
+module.exports = { generateToken };
