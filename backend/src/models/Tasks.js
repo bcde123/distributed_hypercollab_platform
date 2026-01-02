@@ -81,7 +81,7 @@ const TaskSchema = new Schema({
         ref: 'User',
         default: null
     },
-    lockedExpiresAt: {
+    lockExpiresAt: {
         type: Date,
         default: null
     }

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
-const workspace = require('../models/workSpace');
+const Workspace = require('../models/workSpace');
 const User = require('../models/User');
 const { verifyAccessToken } = require('../middleware/auth');
 
@@ -23,7 +23,7 @@ router.post('/workspaces',verifyAccessToken, async (req,res) => {
         }
 
         // 2.Create new workspace
-        const newworkspace = new workspace({
+        const newworkspace = new Workspace({
             name,
             slug,
             owner: ownerId,
