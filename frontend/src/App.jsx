@@ -1,9 +1,5 @@
-import LandingPage from "./pages/landing/LandingPage"
+import AppRouter from "./router/AppRouter"
 
 export default function App() {
-  return (
-    <div className="font-sans antialiased">
-      <LandingPage />
-    </div>
-  )
+  return <AppRouter />
 }
