@@ -35,7 +35,7 @@ const TaskSchema = new Schema({
         required: true,
     },
     // Assignment
-    assignes: [{
+    assignees: [{
         type: Schema.Types.ObjectId,
         ref: 'User'
     }],
@@ -94,7 +94,7 @@ const TaskSchema = new Schema({
 TaskSchema.index({ board: 1,listId: 1, rank: 1 });
 
 // 2. User dashboard view - quickly find tasks by user and status
-TaskSchema.index({ assignes: 1, workspace: 1, status: 1 });
+TaskSchema.index({ assignees: 1, workspace: 1, status: 1 });
 
 // 3. Analytics Engine Polling:
 // Allows the C++ service to find tasks modified in the last X minutes.

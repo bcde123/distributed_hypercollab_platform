@@ -29,7 +29,7 @@ router.post('/register', async (req, res) => {
     }
 });
 
-router.post('Refresh' , async (req, res) => {
+router.post('/refresh' , async (req, res) => {
     const cookies = req.cookies;
 
     // 1. Check for refresh token in cookies

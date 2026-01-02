@@ -1,5 +1,9 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
+const router = require('express').Router({ mergeParams: true }); // Essential for accessing workspaceId from parent route
+const verifyAccessToken = require('../middleware/auth').verifyAccessToken;
+const { PERMISSIONS } = require('../middleware/permissions');
+const { checkPermission } = require('../middleware/rbac');
 
 const ListSchema = new Schema({
     title: {

@@ -3,7 +3,7 @@ const redisClient = require('../config/redis');
 
 const ACCESS_TOKEN_TTL = '15m'; // 15 minutes
 const REFRESH_TOKEN_TTL = '7d'; // 7 days
-const RESET_PASSWORD_TOKEN_TTL = 7*24*60*60; // 7 days in seconds
+const REFRESH_TOKEN_SECONDS = 7 * 24 * 60 * 60;
 
 const generateToken = async (user) => {
     // Payload for access token
@@ -30,7 +30,7 @@ const generateToken = async (user) => {
         `refreshToken:${user._id}`,
         refreshToken,
         'EX',
-        REFRESH_TOKEN_TTL
+        REFRESH_TOKEN_SECONDS
     );
     return { accessToken, refreshToken };
 };

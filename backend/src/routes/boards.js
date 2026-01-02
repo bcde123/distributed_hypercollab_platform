@@ -1,7 +1,8 @@
 const express = require('express');
 const { verifyAccessToken } = require('../middleware/auth');
 const router = express.Router();
-const { checkPermission, PERMISSIONS } = require('../middleware/permissions');
+const { PERMISSIONS } = require('../middleware/permissions');
+const { checkPermission } = require('../middleware/rbac');
 const {verifyAccessToken} = require('../middleware/auth');
 
 router.delete(

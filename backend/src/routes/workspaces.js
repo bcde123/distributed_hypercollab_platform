@@ -30,7 +30,7 @@ router.post('/workspaces',verifyAccessToken, async (req,res) => {
             description,
             members: [{ 
                 user: ownerId,
-                role: 'Admin',
+                role: 'admin',
                 status: 'Active'
             }]
         });

@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const authRoutes = require('./src/routes/auth');
 const workspaceRoutes = require('./src/routes/workspaces');
 const cookieParser = require('cookie-parser');
+const boardRoutes = require('./src/routes/boards');
 
 const app =   express();
 const PORT = process.env.PORT || 5000;
@@ -20,6 +21,7 @@ mongoose.connect(process.env.MONGO_URI)
 // Routes
 app.use('/api/auth',authRoutes);
 app.use('/api',workspaceRoutes);
+app.use('/api/boards', boardRoutes);
 
 // Basic route
 
