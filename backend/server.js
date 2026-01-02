@@ -21,7 +21,8 @@ mongoose.connect(process.env.MONGO_URI)
 // Routes
 app.use('/api/auth',authRoutes);
 app.use('/api',workspaceRoutes);
-app.use('/api/boards', boardRoutes);
+// This structure ensures :workspaceId is available in req.params for the RBAC middleware
+app.use('/api/workspaces/:workspaceId/boards', boardRoutes);
 
 // Basic route
 

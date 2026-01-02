@@ -1,8 +1,7 @@
 const express = require('express');
-const { verifyAccessToken } = require('../middleware/auth');
-const router = express.Router();
-const { PERMISSIONS } = require('../middleware/permissions');
-const { checkPermission } = require('../middleware/rbac');
+const router = express.Router({ mergeParams: true }); // Essential for accessing workspaceId from parent route
+const { PERMISSIONS } = require('../constants/permissions');
+const checkPermission = require('../middleware/rbac');
 const {verifyAccessToken} = require('../middleware/auth');
 
 router.delete(
