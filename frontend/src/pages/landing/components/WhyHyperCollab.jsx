@@ -1,28 +1,49 @@
 import { Card, CardContent } from "@/components/ui/card"
-import { Layers, CheckCircle2, MessageSquare, BarChart3 } from "lucide-react"
+import {
+  CheckCircle2,
+  MessageSquare,
+  Layers,
+  BarChart3,
+} from "lucide-react"
 
 export default function WhyHyperCollab() {
   return (
-    <section className="px-6 py-20 bg-muted/30">
-      <div className="max-w-5xl mx-auto text-center">
+    <section className="px-6 py-24 bg-background">
+      <div className="max-w-6xl mx-auto text-center">
 
-        <h2 className="text-3xl md:text-5xl font-bold mb-6">
-          Instead of juggling 4 tools — HyperCollab unifies everything.
+        {/* Heading */}
+          <h2 className="text-4xl md:text-5xl font-bold mb-4">
+          Instead of juggling 4 tools —
+        </h2>
+        <h2 className="text-4xl md:text-5xl font-bold mb-4">
+          HyperCollab unites everything.
         </h2>
 
-        <div className="grid md:grid-cols-4 gap-4 mb-10">
+        {/* Subheading */}
+        <p className="text-lg text-muted-foreground max-w-3xl mx-auto mb-14">
+          Stop context-switching between Trello, Slack, Notion, and your analytics dashboard.
+          <br />
+          One login. One workspace. Infinite focus.
+        </p>
+
+        {/* Tool Cards */}
+        <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-6 mb-12">
           <StrikeCard icon={<CheckCircle2 />} label="Task Tool" />
           <StrikeCard icon={<MessageSquare />} label="Chat App" />
           <StrikeCard icon={<Layers />} label="Workspace" />
           <StrikeCard icon={<BarChart3 />} label="Analytics" />
         </div>
 
-        <Card className="border-2 border-primary shadow-lg inline-block">
-          <CardContent className="p-6 flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <Layers className="w-5 h-5 text-primary-foreground" />
+        {/* Final Unified Card */}
+        <Card className="border-2 border-primary/60 shadow-lg">
+          <CardContent className="p-10 flex flex-col items-center gap-2">
+            <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center mb-2">
+              <Layers className="w-6 h-6 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold">HyperCollab</span>
+            <p className="text-xl font-semibold">HyperCollab</p>
+            <p className="text-sm text-muted-foreground">
+              All-in-one workspace
+            </p>
           </CardContent>
         </Card>
 
@@ -33,12 +54,14 @@ export default function WhyHyperCollab() {
 
 function StrikeCard({ icon, label }) {
   return (
-    <Card>
-      <CardContent className="p-6 text-center">
-        <div className="w-10 h-10 bg-muted mx-auto rounded-lg flex items-center justify-center mb-3">
+    <Card className="border shadow-sm">
+      <CardContent className="p-8 text-center">
+        <div className="w-12 h-12 bg-muted rounded-xl mx-auto mb-4 flex items-center justify-center">
           {icon}
         </div>
-        <p className="line-through text-muted-foreground">{label}</p>
+        <p className="text-sm font-medium text-muted-foreground line-through">
+          {label}
+        </p>
       </CardContent>
     </Card>
   )
