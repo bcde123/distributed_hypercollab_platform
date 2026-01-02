@@ -30,7 +30,7 @@ export default function WhyHyperCollab() {
         <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-6 mb-12">
           <StrikeCard icon={<CheckCircle2 />} label="Task Tool" />
           <StrikeCard icon={<MessageSquare />} label="Chat App" />
-          <StrikeCard icon={<Layers />} label="Workspace" />
+          <StrikeCard icon={<Layers />} label="workspace" />
           <StrikeCard icon={<BarChart3 />} label="Analytics" />
         </div>
 

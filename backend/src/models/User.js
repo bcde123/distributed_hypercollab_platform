@@ -30,7 +30,7 @@ const userSchema = new Schema({
     workspaces: [{
         workspaceId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Workspace',
+            ref: 'workspace',
             required: true
         },
         role: {
@@ -65,7 +65,8 @@ const userSchema = new Schema({
     },
     lastLogin: {
         type: Date
-    },
+    }
+}, {
     timestamps: true,
     toJSON: {
         virtuals: true

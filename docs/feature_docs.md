@@ -21,7 +21,7 @@
 
 ---
 
-## 2️⃣ Workspaces & Team Management
+## 2️⃣ workspaces & Team Management
 
 **Why:** Multi-user collaboration system
 

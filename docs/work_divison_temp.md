@@ -12,7 +12,7 @@
 * JWT auth (login / register)
 * Refresh tokens
 * RBAC middleware (Admin / Member / Viewer)
-* MongoDB User & Workspace schema
+* MongoDB User & workspace schema
 
 ### Person B
 
@@ -111,7 +111,7 @@
 * Improve C++ server:
 
   * Thread pool
-  * Workspace-based rooms
+  * workspace-based rooms
   * Connection cleanup
 * Handle reconnects
 
@@ -207,7 +207,7 @@
 | Feature          | Week |
 | ---------------- | ---- |
 | Auth + RBAC      | 1    |
-| Workspaces       | 1    |
+| workspaces       | 1    |
 | Boards & Tasks   | 2    |
 | Real-time Chat   | 3–4  |
 | Live Updates     | 4    |

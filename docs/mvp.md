@@ -32,7 +32,7 @@ rather than feature bloat.
 
 ---
 
-### 2. Workspace Management
+### 2. workspace Management
 **Purpose:** Logical grouping of users and collaboration data
 
 **Functional Requirements:**

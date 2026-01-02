@@ -1,15 +1,15 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
-const workSpaceSchema = new Schema({
+const workspaceSchema = new Schema({
     name: {
         type: String,
-        required: [true, 'WorkSpace name is required'],
+        required: [true, 'workspace name is required'],
         trim: true
     },
     slug: {
         type: String,
-        required: [true, 'WorkSpace slug is required'],
+        required: [true, 'workspace slug is required'],
         unique: true,
         lowercase: true,
         trim: true,
@@ -18,7 +18,7 @@ const workSpaceSchema = new Schema({
     owner: {
         type: Schema.Types.ObjectId,
         ref: 'User',
-        required: [true, 'WorkSpace owner is required']
+        required: [true, 'workspace owner is required']
     },
     members: [{
         user : {
@@ -28,8 +28,8 @@ const workSpaceSchema = new Schema({
         },
         role: {
             type: String,
-            enum: ['Admin', 'Member', 'Viewer'],
-            default: 'Viewer'
+            enum: ['admin', 'member', 'viewer'],
+            default: 'viewer'
         },
         AddedAt: {
             type: Date,
@@ -53,8 +53,8 @@ const workSpaceSchema = new Schema({
         },
         defaultBoardVisibility: {
             type: String,
-            enum: ['Private', 'Workspace', 'Public'],
-            default: 'Workspace'
+            enum: ['Private', 'workspace', 'Public'],
+            default: 'workspace'
         }
     },
     deletedAt: {
@@ -67,7 +67,7 @@ const workSpaceSchema = new Schema({
 
 // Optimizing queries for members
 // help in member lookups within workspaces
-workSpaceSchema.index({ 'members.user': 1 });
+workspaceSchema.index({ 'members.user': 1 });
 
-const WorkSpace = mongoose.model('WorkSpace', workSpaceSchema);
-module.exports = WorkSpace;
+const workspace = mongoose.model('workspace', workspaceSchema);
+module.exports = workspace;

@@ -10,11 +10,11 @@ export default function HeroSection() {
         {/* Text */}
         <div className="text-center max-w-4xl mx-auto mb-16">
           <Badge variant="secondary" className="mb-6 px-4 py-1.5 text-sm">
-            Real-time Unified Workspace
+            Real-time Unified workspace
           </Badge>
 
           <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
-            One Workspace. Tasks, Chat & Insights — Live.
+            One workspace. Tasks, Chat & Insights — Live.
           </h1>
 
           <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
