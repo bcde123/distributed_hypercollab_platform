@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const redisClient = require('../config/redis');
 
 const ACCESS_TOKEN_TTL = '15m'; // 15 minutes
 const REFRESH_TOKEN_TTL = '7d'; // 7 days
@@ -24,6 +25,13 @@ const generateToken = async (user) => {
         { expiresIn: REFRESH_TOKEN_TTL }
     );
     
+    // Store refresh token in Redis
+    await redisClient.set(
+        `refreshToken:${user._id}`,
+        refreshToken,
+        'EX',
+        REFRESH_TOKEN_TTL
+    );
     return { accessToken, refreshToken };
 };
 
