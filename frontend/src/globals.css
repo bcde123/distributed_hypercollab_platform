@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: oklch(0.99 0 0);
+  --foreground: oklch(0.15 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.15 0 0);
+  --primary: oklch(0.525 0.153 264);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.95 0.01 264);
+  --muted: oklch(0.96 0.005 264);
+  --muted-foreground: oklch(0.5 0.01 264);
+  --border: oklch(0.92 0.005 264);
+  --ring: oklch(0.525 0.153 264);
+  --radius: 0.75rem;
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+}
