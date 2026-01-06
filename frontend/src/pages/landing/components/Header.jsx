@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button"
 import { Layers } from "lucide-react"
-
+import { Link } from "react-router-dom"
 export default function Header() {
   return (
     <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
@@ -30,11 +30,18 @@ export default function Header() {
         </nav>
 
         {/* Actions */}
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" className="hidden md:inline-flex">
-            Log in
-          </Button>
-          <Button size="sm">Get Started</Button>
+       <div className="flex items-center gap-3">
+          <Link to="/login">
+            <Button variant="ghost" size="sm" className="hidden md:inline-flex">
+              Log in
+            </Button>
+          </Link>
+
+          <Link to="/signup">
+            <Button size="sm">
+              Get Started
+            </Button>
+          </Link>
         </div>
 
       </div>

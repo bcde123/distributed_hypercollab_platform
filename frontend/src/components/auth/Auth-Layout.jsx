@@ -1,4 +1,5 @@
 import React from "react"
+import { Link } from "react-router-dom"
 
 export function AuthLayout({ children, title, description }) {
   return (
@@ -33,7 +34,8 @@ export function AuthLayout({ children, title, description }) {
         </div>
 
         {/* Branding */}
-        <div className="absolute top-8 left-8 flex items-center gap-3">
+        <Link to="/" className="flex items-center gap-2">
+         <div className="absolute top-8 left-8 flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
             <svg className="w-6 h-6 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -41,6 +43,8 @@ export function AuthLayout({ children, title, description }) {
           </div>
           <span className="text-xl font-semibold text-foreground">HyperCollab</span>
         </div>
+        </Link>
+       
       </div>
 
       {/* Right Side - Auth Form */}
