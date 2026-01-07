@@ -3,7 +3,7 @@ import LandingPage from "@/pages/landing/LandingPage"
 import LoginPage from "@/pages/auth/LoginPage"
 import SignupPage from "@/pages/auth/SignupPage"
 import WorkspacePage from "@/pages/workspace/workspace"
-
+import Onboarding from "@/pages/workspace/Onboarding"
 
 export default function AppRouter() {
   return (
@@ -13,6 +13,7 @@ export default function AppRouter() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path='/workspace' element={<WorkspacePage/>}/>
+        <Route path="/onboarding" element={<Onboarding />} />
       </Routes>
     </BrowserRouter>
   )
