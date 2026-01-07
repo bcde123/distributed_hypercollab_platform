@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const router = require('./src/routes/auth');
-
+const cors=require('cors');
 // const workspaceRoutes = require('./src/routes/workspaces');
 const cookieParser = require('cookie-parser');
 // const boardRoutes = require('./src/routes/boards');
@@ -10,8 +10,17 @@ const cookieParser = require('cookie-parser');
 const app =   express();
 const PORT = process.env.PORT || 5001;
 // Middleware
+app.use(cors({
+  origin: "http://localhost:5173",
+  credentials: true
+}));
+
+// app.options("*", cors());
+
+
 app.use(express.json());
 app.use(cookieParser());
+
 
 // Database connection
 mongoose.connect(process.env.MONGO_URI)
@@ -34,17 +43,3 @@ app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
 
-
-// require('dotenv').config();
-// const express = require('express');
-// const cookieParser = require('cookie-parser');
-
-// const app = express();
-// app.use(express.json());
-// app.use(cookieParser());
-
-// app.get('/', (req, res) => {
-//     res.status(200).send('HyperCollab API is running');
-// });
-
-// app.listen(5001, () => console.log('Server running'));

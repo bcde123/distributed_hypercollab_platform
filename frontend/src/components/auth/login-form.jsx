@@ -2,38 +2,47 @@ import React, { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useNavigate } from "react-router-dom"
+import { useDispatch } from "react-redux"
+import { loginUser } from "@/features/auth/authThunks"
+import { toast } from "sonner";
+
+
 
 export function LoginForm() {
+  const dispatch=useDispatch()
+  const navigate = useNavigate()
+
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError("")
-    setIsLoading(true)
+  e.preventDefault()
+  setError("")
+  setIsLoading(true)
 
-    // Validation
-    if (!email || !password) {
-      setError("Please fill in all fields")
-      setIsLoading(false)
-      return
-    }
-
-    if (!email.includes("@")) {
-      setError("Please enter a valid email address")
-      setIsLoading(false)
-      return
-    }
-
-    // Simulate API call
-    setTimeout(() => {
-      console.log("[v0] Login attempt:", { email })
-      setIsLoading(false)
-      // In a real app, handle authentication here
-    }, 1500)
+  if (!email || !password) {
+    toast.error("Please fill in all fields")
+    setIsLoading(false)
+    return
   }
+
+  try {
+    const res = await dispatch(
+      loginUser({ email, password })
+    ).unwrap()
+
+    toast.success("Login successful")
+    navigate("/workspace")
+  } catch (err) {
+    toast.error(err || "Invalid credentials")
+  } finally {
+    setIsLoading(false)
+  }
+}
+
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
