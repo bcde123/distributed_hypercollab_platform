@@ -1,15 +1,67 @@
+require('dotenv').config();
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const { generateToken } = require('../utils/tokenGenerator');
 const jwt = require('jsonwebtoken');
 const redisClient = require('../config/redis');
+const bcrypt = require('bcryptjs');
+
+// Login route
+router.post('/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        // 1. Check if user exists
+        // We must explicitly .select('+password') because it is set to select: false in the schema
+        const user = await User.findOne({ email }).select('+password');
+        
+        if (!user) {
+            return res.status(401).json({ message: 'Invalid credentials' });
+        }
+
+        // 2. Validate password using the method defined in User model
+        const isMatch = await user.comparePassword(password);
+        if (!isMatch) {
+            return res.status(401).json({ message: 'Invalid credentials' });
+        }
+
+        // 3. Generate tokens
+        const tokens = await generateToken(user);
+
+        // 4. Set Refresh Token in HTTP-only cookie (same settings as register/refresh)
+        res.cookie('jwt', tokens.refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'Strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        });
+
+        // 5. Respond with Access Token and user info
+        // Remove password from user object before sending response
+        user.password = undefined;
+        
+        res.json({ 
+            accessToken: tokens.accessToken, 
+            user: {
+                _id: user._id,
+                username: user.username,
+                email: user.email,
+                profile: user.profile
+            }
+        });
+
+    } catch (err) {
+        console.error('Login error:', err);
+        res.status(500).json({ message: 'Server error', error: err.message });
+    }
+});
 
 // Register route
 router.post('/register', async (req, res) => {
     try {
         const { username, email, password } = req.body;
-        const newUser = new User({ username, email, password });
+        const newUser = new User({ username, email, password }); 
         await newUser.save();
 
         // Token generated immediately after registration
@@ -23,7 +75,14 @@ router.post('/register', async (req, res) => {
             maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
         });
 
-        res.status(201).json({ accessToken: token.accessToken,newUser });
+        res.status(201).json({
+            accessToken: token.accessToken,
+            user: {
+                _id: newUser._id,
+                username: newUser.username,
+                email: newUser.email,
+            }
+        });
     } catch (err) {
         res.status(500).json({ message: 'Server error', error: err.message });
     }
