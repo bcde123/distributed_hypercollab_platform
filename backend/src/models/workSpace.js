@@ -57,6 +57,16 @@ const workspaceSchema = new Schema({
             default: 'workspace'
         }
     },
+    inviteToken: {
+        type: String,
+        unique: true,
+        sparse: true,
+        index: true
+    },
+    inviteTokenExpiry: {
+        type: Date,
+        default: null
+    },
     deletedAt: {
         type: Date,
         default: null
