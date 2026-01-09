@@ -5,9 +5,10 @@ const router = require('./src/routes/auth');
 const workspaceRoutes = require('./src/routes/workspaces');
 const cookieParser = require('cookie-parser');
 const boardRoutes = require('./src/routes/boards');
-
+const cors=require('cors');
 const app =   express();
 const PORT = process.env.PORT || 5001;
+
 // Middleware
 app.use(cors({
   origin: "http://localhost:5173",
