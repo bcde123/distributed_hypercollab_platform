@@ -4,32 +4,41 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { registerUser } from "@/features/auth/authThunks"
-
-
+import { useNavigate } from "react-router-dom"
+import { toast } from "sonner"
 
 export function SignUpForm() {
   const dispatch = useDispatch()
+  const navigate = useNavigate()
 
+  // ✅ use Redux state (single source of truth)
   const { isLoading, error } = useSelector((state) => state.auth)
 
   const [username, setUsername] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
 
     if (!username || !email || !password) return
     if (!email.includes("@")) return
     if (password.length < 8) return
 
-    dispatch(
-      registerUser({
-        username,
-        email,
-        password,
-      })
-    )
+    try {
+      await dispatch(
+        registerUser({
+          username,
+          email,
+          password,
+        })
+      ).unwrap() // ✅ critical fix
+
+      toast.success("Signup successful")
+      navigate("/login")
+    } catch (err) {
+      toast.error(err || "Signup failed")
+    }
   }
 
   return (
