@@ -7,6 +7,10 @@ const jwt = require('jsonwebtoken');
 const redisClient = require('../config/redis');
 const bcrypt = require('bcryptjs');
 
+
+
+
+
 // Login route
 router.post('/login', async (req, res) => {
     try {
@@ -70,8 +74,9 @@ router.post('/register', async (req, res) => {
         // Set Refresh Token in HTTP-only cookie
         res.cookie('jwt', token.refreshToken, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'Strict',
+            // secure: process.env.NODE_ENV === 'production',
+            secure: false,
+            sameSite: 'Lax',
             maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
         });
 

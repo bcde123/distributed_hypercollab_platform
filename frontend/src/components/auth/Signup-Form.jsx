@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { registerUser } from "@/features/auth/authThunks"
-// import { registerUser } from "@/store/auth/authThunks"
 
 
 
