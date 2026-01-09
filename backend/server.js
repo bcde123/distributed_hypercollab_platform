@@ -2,10 +2,9 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const router = require('./src/routes/auth');
-
-// const workspaceRoutes = require('./src/routes/workspaces');
+const workspaceRoutes = require('./src/routes/workspaces');
 const cookieParser = require('cookie-parser');
-// const boardRoutes = require('./src/routes/boards');
+const boardRoutes = require('./src/routes/boards');
 
 const app =   express();
 const PORT = process.env.PORT || 5001;
@@ -20,9 +19,9 @@ mongoose.connect(process.env.MONGO_URI)
 
 // Routes
 app.use('/api/auth',router);
-// app.use('/api',workspaceRoutes);
-// // This structure ensures :workspaceId is available in req.params for the RBAC middleware
-// app.use('/api/workspaces/:workspaceId/boards', boardRoutes);
+app.use('/api',workspaceRoutes);
+// This structure ensures :workspaceId is available in req.params for the RBAC middleware
+app.use('/api/workspaces/:workspaceId/boards', boardRoutes);
 
 // Basic route
 
@@ -33,18 +32,3 @@ app.get('/', (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
-
-
-// require('dotenv').config();
-// const express = require('express');
-// const cookieParser = require('cookie-parser');
-
-// const app = express();
-// app.use(express.json());
-// app.use(cookieParser());
-
-// app.get('/', (req, res) => {
-//     res.status(200).send('HyperCollab API is running');
-// });
-
-// app.listen(5001, () => console.log('Server running'));

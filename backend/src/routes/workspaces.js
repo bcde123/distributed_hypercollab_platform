@@ -15,7 +15,7 @@ router.post('/workspaces',verifyAccessToken, async (req,res) => {
         const ownerId = req.user.id; // Extracted from JWT by auth middleware
         
         // 1.Check if slug already exists
-        const existingworkspace = await workspace.findOne({ slug }).session(session);
+        const existingworkspace = await Workspace.findOne({ slug }).session(session);
         if (existingworkspace) {
             await session.abortTransaction();
             session.endSession();
@@ -68,7 +68,7 @@ router.get('/workspaces', verifyAccessToken, async (req, res) => {
         // don't even need to query the workspace collection for the list! [cite: 31]
         // But to get full details (like descriptions), we query based on the member index.
         const userId = req.user.id;
-        const workspaces = await workspace.find({ 'members.user': userId, deletedAt: null });
+        const workspaces = await Workspace.find({ 'members.user': userId, deletedAt: null });
         res.status(200).json({ workspaces });
     } catch (err) {
         res.status(500).json({ message: 'Server error', error: err.message });
