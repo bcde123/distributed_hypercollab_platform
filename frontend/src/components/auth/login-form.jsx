@@ -32,8 +32,7 @@ export function LoginForm() {
   try {
     const res = await dispatch(
       loginUser({ email, password })
-    ).unwrap()
-
+    ).unwrap();
     toast.success("Login successful")
     navigate("/workspace")
   } catch (err) {
