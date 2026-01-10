@@ -6,6 +6,7 @@ const { generateToken } = require('../utils/tokenGenerator');
 const jwt = require('jsonwebtoken');
 const redisClient = require('../config/redis');
 const bcrypt = require('bcryptjs');
+const { verifyAccessToken } = require('../middleware/auth');
 
 
 
@@ -145,5 +146,20 @@ router.post('/refresh' , async (req, res) => {
         return res.status(403).json({ message: 'Invalid or expired token' });
     }
 });
+
+
+router.get("/verify", verifyAccessToken, (req, res) => {
+  // If we reach here, token is valid
+  res.status(200).json({
+    authenticated: true,
+    user: {
+      userId: req.user.userId,
+      email: req.user.email,
+      username: req.user.username,
+    },
+  });
+});
+
+
 
 module.exports = router;

@@ -1,9 +1,12 @@
+
 import AppRouter from "./router/AppRouter"
-import { Toaster } from "sonner";
+import { Toaster } from "sonner"
+
 
 export default function App() {
-  return  (
-  <>
+
+  return (
+    <>
       <AppRouter />
       <Toaster richColors position="top-right" />
     </>

@@ -32,3 +32,18 @@ export const loginUser = createAsyncThunk(
     }
   }
 );
+
+
+export const checkAuth = createAsyncThunk(
+  "auth/checkAuth",
+  async (_, { rejectWithValue }) => {
+    try {
+      const res = await api.get("/auth/verify");
+      return res.data; 
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data || { message: "Not authenticated" }
+      );
+    }
+  }
+);
