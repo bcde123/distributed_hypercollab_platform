@@ -34,7 +34,7 @@ export function LoginForm() {
       loginUser({ email, password })
     ).unwrap();
     toast.success("Login successful")
-    navigate("/workspace")
+    navigate("/onboarding")
   } catch (err) {
     toast.error(err || "Invalid credentials")
   } finally {

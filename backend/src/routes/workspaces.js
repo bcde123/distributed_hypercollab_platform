@@ -14,6 +14,7 @@ router.post('/workspaces',verifyAccessToken, async (req,res) => {
     try {
         const { name, slug, description } = req.body;
         const ownerId = req.user.userId; // Extracted from JWT by auth middleware
+        
         // 1.Check if slug already exists
         const existingworkspace = await Workspace.findOne({ slug }).session(session);
         if (existingworkspace) {
