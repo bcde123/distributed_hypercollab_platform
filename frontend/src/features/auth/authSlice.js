@@ -6,7 +6,7 @@ const initialState = {
   user: null,
   accessToken:null,
   isAuthenticated: false,
-  isLoading: false,
+  isLoading: true,
   error: null,
 };
 
@@ -31,11 +31,13 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.isAuthenticated = true;
         state.user = action.payload.user;
+        state.accessToken = action.payload.accessToken;
       })
       .addCase(checkAuth.rejected, (state) => {
         state.isLoading = false;
         state.isAuthenticated = false;
         state.user = null;
+        state.accessToken = null;
       })
       // registerUser
       .addCase(registerUser.pending, (state) => {

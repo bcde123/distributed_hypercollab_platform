@@ -25,6 +25,10 @@ export const loginUser = createAsyncThunk(
         { withCredentials: true }
       );
       
+      // Set the token in Axios headers immediately after login
+      const token = response.data.accessToken;
+      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+
       return response.data;
     } catch (err) {
       return rejectWithValue(
@@ -39,8 +43,18 @@ export const checkAuth = createAsyncThunk(
   "auth/checkAuth",
   async (_, { rejectWithValue }) => {
     try {
-      const res = await api.get("/auth/verify");
-      return res.data; 
+      // 1. Try to refresh the token first (uses the HttpOnly cookie)
+      const refreshRes = await api.post("/auth/refresh");
+      const accessToken = refreshRes.data.accessToken;
+
+      // 2. Set the new token in Axios headers for future requests
+      api.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
+      // 3. Now verify authentication with the new token
+      const verifyRes = await api.get("/auth/verify");
+      return { 
+        user: verifyRes.data.user, 
+        accessToken: accessToken 
+      };
     } catch (error) {
       return rejectWithValue(
         error.response?.data || { message: "Not authenticated" }
