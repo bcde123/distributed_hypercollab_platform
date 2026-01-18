@@ -1,7 +1,7 @@
 require('dotenv').config();
-console.log('hi');
 const express = require('express');
 const mongoose = require('mongoose');
+console.log('hi');
 const router = require('./src/routes/auth');
 const workspaceRoutes = require('./src/routes/workspaces');
 const cookieParser = require('cookie-parser');
