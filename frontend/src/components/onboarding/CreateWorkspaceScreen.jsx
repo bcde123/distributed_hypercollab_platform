@@ -8,12 +8,10 @@ import { ArrowLeft } from "lucide-react"
 import { useDispatch, useSelector } from "react-redux"
 import { createWorkspace } from "@/features/workspace/workspaceThunks"
 import { toast } from "sonner"
-import { useNavigate } from "react-router-dom"
 
-export function CreateWorkspaceScreen({ onNavigate }) {
+export function CreateWorkspaceScreen({ onNavigate ,onWorkspaceCreated,}) {
   const dispatch = useDispatch()
   const { isLoading, error } = useSelector((state) => state.workspace)
-  const navigate = useNavigate()
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
 
@@ -37,8 +35,7 @@ export function CreateWorkspaceScreen({ onNavigate }) {
 
   if (createWorkspace.fulfilled.match(result)) {
     toast.success("Workspace created successfully 🎉")
-    console.log(result.payload.workspace.slug)
-    navigate(`/workspaces/${result.payload.workspace.slug}`)
+    onWorkspaceCreated(result.payload.workspace.name)
   }
 
   if (createWorkspace.rejected.match(result)) {

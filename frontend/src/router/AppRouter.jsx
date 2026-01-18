@@ -13,14 +13,14 @@ export default function AppRouter() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
-        <Route path="/workspace" element={
-          <PrivateRoute>
-            <WorkspacePage />
-          </PrivateRoute>
-        }/>
         <Route path="/onboarding" element={
           <PrivateRoute>
             <Onboarding />
+          </PrivateRoute>
+        }/>
+        <Route path="/workspaces/:slug" element={
+          <PrivateRoute>
+            <WorkspacePage />
           </PrivateRoute>
         }/>
       </Routes>
