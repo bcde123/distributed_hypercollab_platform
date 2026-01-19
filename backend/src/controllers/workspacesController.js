@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const crypto = require('crypto');
 const Workspace = require('../models/workSpace');
 const User = require('../models/User');
+const sendEmail = require("../utils/sendEmail");
 
 // Create workspace controller
 const createWorkspace = async (req, res) => {
@@ -10,7 +11,7 @@ const createWorkspace = async (req, res) => {
     try {
         const { name, slug, description } = req.body;
         const ownerId = req.user.userId; // Extracted from JWT by auth middleware
-        
+
         // 1.Check if slug already exists
         const existingworkspace = await Workspace.findOne({ slug }).session(session);
         if (existingworkspace) {
@@ -25,7 +26,7 @@ const createWorkspace = async (req, res) => {
             slug,
             owner: ownerId,
             description,
-            members: [{ 
+            members: [{
                 user: ownerId,
                 role: 'admin',
                 status: 'Active'
@@ -34,22 +35,22 @@ const createWorkspace = async (req, res) => {
 
         await newworkspace.save({ session });
         // 3.Update the User document to include this workspace
-        await User.findByIdAndUpdate(ownerId, 
+        await User.findByIdAndUpdate(ownerId,
             {
-              $push: { 
-                workspaces: {
-                    workspaceId: newworkspace._id,
-                    role: 'admin'
+                $push: {
+                    workspaces: {
+                        workspaceId: newworkspace._id,
+                        role: 'admin'
+                    }
                 }
-              }
             },
-            {session}
+            { session }
         );
 
         // 4.Commit transaction
         await session.commitTransaction();
         session.endSession();
-        
+
         res.status(201).json({ message: 'workspace created successfully', workspace: newworkspace });
     } catch (err) {
         await session.abortTransaction();
@@ -57,6 +58,9 @@ const createWorkspace = async (req, res) => {
         res.status(500).json({ message: 'Server error', error: err.message });
     }
 };
+
+
+
 
 // Get all workspaces controller
 const getAllWorkspaces = async (req, res) => {
@@ -72,44 +76,67 @@ const getAllWorkspaces = async (req, res) => {
     }
 };
 
+
+
+
+
 // Generate invite link controller
 const generateInviteLink = async (req, res) => {
     try {
         const { workspaceId } = req.params;
         const userId = req.user.userId;
-        const { expiryHours = 168 } = req.body; // Default 7 days (168 hours)
-        console.log('Generating invite link for workspace:', req);
-        // Find workspace and check if user is admin or owner
+        const { expiryHours = 168, email } = req.body;
+
         const workspace = await Workspace.findById(workspaceId);
         if (!workspace) {
             return res.status(404).json({ message: 'Workspace not found' });
         }
 
-        // Check if user is admin or owner
         const member = workspace.members.find(m => m.user.toString() === userId);
         if (!member || (member.role !== 'admin' && workspace.owner.toString() !== userId)) {
             return res.status(403).json({ message: 'Only admins can generate invite links' });
         }
 
-        // Generate unique invite token
         const inviteToken = crypto.randomBytes(32).toString('hex');
         const inviteTokenExpiry = new Date(Date.now() + expiryHours * 60 * 60 * 1000);
 
-        // Update workspace with invite token
         workspace.inviteToken = inviteToken;
         workspace.inviteTokenExpiry = inviteTokenExpiry;
         await workspace.save();
 
+        const inviteLink = `${req.protocol}://${req.get('host')}/api/workspaces/join/${inviteToken}`;
+
+        // ✅ Optional email sending
+        if (email) {
+            await sendEmail({
+                to: email,
+                subject: "You're invited to join a workspace",
+                html: `
+                  <p>You’ve been invited to join a workspace.</p>
+                  <p><a href="${inviteLink}">Accept Invite</a></p>
+                  <p>This link expires on ${inviteTokenExpiry.toLocaleString()}.</p>
+                `
+            });
+        }
+
         res.status(200).json({
             message: 'Invite link generated successfully',
             inviteToken,
-            inviteLink: `${req.protocol}://${req.get('host')}/api/workspaces/join/${inviteToken}`,
-            expiresAt: inviteTokenExpiry
+            inviteLink,
+            expiresAt: inviteTokenExpiry,
+            emailSent: !!email
         });
     } catch (err) {
         res.status(500).json({ message: 'Server error', error: err.message });
     }
 };
+
+
+
+
+
+
+
 
 // Join workspace via invite link controller
 const joinWorkspace = async (req, res) => {
@@ -119,9 +146,9 @@ const joinWorkspace = async (req, res) => {
         const { inviteToken } = req.params;
         const userId = req.user.userId;
         // Find workspace by invite token
-        const workspace = await Workspace.findOne({ 
+        const workspace = await Workspace.findOne({
             inviteToken,
-            deletedAt: null 
+            deletedAt: null
         }).session(session);
 
         if (!workspace) {
@@ -192,9 +219,9 @@ const getInviteLinkDetails = async (req, res) => {
     try {
         const { inviteToken } = req.params;
 
-        const workspace = await Workspace.findOne({ 
+        const workspace = await Workspace.findOne({
             inviteToken,
-            deletedAt: null 
+            deletedAt: null
         }).select('name description inviteTokenExpiry');
 
         if (!workspace) {

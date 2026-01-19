@@ -20,6 +20,7 @@
     "ioredis": "^5.8.2",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.1.2",
+    "nodemailer": "^7.0.12",
     "redis": "^5.10.0"
   },
   "devDependencies": {
