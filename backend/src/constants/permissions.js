@@ -10,14 +10,14 @@ const PERMISSIONS = {
 // Map Roles to Capabilities
 // This allows you to change what a "Member" can do without rewriting every route.
 const ROLE_PERMISSIONS = {
-    Admin: Object.values(PERMISSIONS), // Admins can do everything
-    Member: [
+    admin: Object.values(PERMISSIONS), // Admins can do everything
+    member: [
         PERMISSIONS.CREATE_BOARD,
         PERMISSIONS.CREATE_TASK,
         PERMISSIONS.COMMENT_TASK,
         PERMISSIONS.VIEW_CONTENT
     ],
-    Viewer: [
+    viewer: [
         PERMISSIONS.COMMENT_TASK,
         PERMISSIONS.VIEW_CONTENT
     ]
