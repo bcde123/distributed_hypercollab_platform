@@ -3,6 +3,7 @@ import {
   createWorkspace,
   generateInviteLink,
   joinWorkspaceByInvite,
+  getWorkspaceBySlug,
 } from "./workspaceThunks"
 
 const initialState = {
@@ -80,6 +81,20 @@ const workspaceSlice = createSlice({
         state.isLoading = false
         state.error = action.payload
       })
+
+      .addCase(getWorkspaceBySlug.pending, (state) => {
+  state.isLoading = true;
+  state.error = null;
+})
+.addCase(getWorkspaceBySlug.fulfilled, (state, action) => {
+  state.isLoading = false;
+  state.currentWorkspace = action.payload;
+})
+.addCase(getWorkspaceBySlug.rejected, (state, action) => {
+  state.isLoading = false;
+  state.error = action.payload;
+})
+
   },
 })
 

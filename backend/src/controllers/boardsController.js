@@ -4,26 +4,26 @@ const Task = require('../models/Tasks');
 // Create a new board
 const createBoard = async (req, res) => {
   try {
-    const { title, background } = req.body;
-    const { workspaceId } = req.params;
+    const { title, background } = req.body
+    const { workspaceId } = req.params
 
     if (!title?.trim()) {
-      return res.status(400).json({ message: "Board title is required" });
+      return res.status(400).json({ message: "Board title is required" })
     }
 
     const board = await Board.create({
       workspace: workspaceId,
       title: title.trim(),
       background: background || "default-blue",
-      createdBy: req.user.id,
+      createdBy: req.user.userId,
       lists: []
-    });
+    })
 
-    res.status(201).json(board);
+    res.status(201).json({ board })
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    res.status(500).json({ message: err.message })
   }
-};
+}
 
 
 // Get all boards in a workspace

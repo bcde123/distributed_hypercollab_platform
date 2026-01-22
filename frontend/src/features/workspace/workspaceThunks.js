@@ -77,3 +77,18 @@ export const joinWorkspaceByInvite = createAsyncThunk(
     }
   }
 )
+
+
+export const getWorkspaceBySlug = createAsyncThunk(
+  "workspace/getWorkspaceBySlug",
+  async (slug, { rejectWithValue }) => {
+    try {
+      const res = await api.get(`/workspaces/slug/${slug}`);
+      return res.data.workspace;
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data?.message || "Failed to fetch workspace"
+      );
+    }
+  }
+);

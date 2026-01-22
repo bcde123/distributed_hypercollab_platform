@@ -18,4 +18,8 @@ router.post('/workspaces/join/:inviteToken', verifyAccessToken, workspacesContro
 // Get invite link details (without authentication - for preview)
 router.get('/workspaces/invite/:inviteToken', workspacesController.getInviteLinkDetails);
 
+router.get("/workspaces/slug/:slug", verifyAccessToken,workspacesController.getWorkspaceBySlug);
+
+
+
 module.exports = router;
