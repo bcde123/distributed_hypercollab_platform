@@ -13,7 +13,7 @@ export function AddTeamMembersScreen({ workspaceName }) {
   const dispatch = useDispatch()
   const navigate = useNavigate()
 
-  const { currentWorkspace, inviteLink, isLoading } = useSelector(
+  const { currentWorkspace, invite, isLoading } = useSelector(
     (state) => state.workspace
   )
 
@@ -22,17 +22,30 @@ export function AddTeamMembersScreen({ workspaceName }) {
 
   const addEmail = () => {
     if (!currentEmail.trim()) return
-    setEmails([...emails, currentEmail])
+    setEmails((prev) => [...prev, currentEmail.trim()])
     setCurrentEmail("")
   }
 
+  /* ================= Generate Invite ================= */
   const handleGenerateInvite = async () => {
+    if (!currentWorkspace?._id) {
+      toast.error("Workspace not ready")
+      return
+    }
+
     const result = await dispatch(
-      generateInviteLink(currentWorkspace._id)
+      generateInviteLink({
+        workspaceId: currentWorkspace._id,
+        emails, // 👈 MULTIPLE EMAILS
+      })
     )
 
     if (generateInviteLink.fulfilled.match(result)) {
-      toast.success("Invite link generated 🔗")
+      toast.success(
+        invite.emailsSent > 0
+          ? `Invite sent to ${invite.emailsSent} email(s) 📧`
+          : "Invite link generated 🔗"
+      )
     }
 
     if (generateInviteLink.rejected.match(result)) {
@@ -40,19 +53,19 @@ export function AddTeamMembersScreen({ workspaceName }) {
     }
   }
 
+  /* ================= Copy Link ================= */
+  const copyInviteLink = async () => {
+    await navigator.clipboard.writeText(invite.link)
+    toast.success("Invite link copied")
+  }
 
-    const handleFinishSetup = () => {
+  /* ================= Finish Setup ================= */
+  const handleFinishSetup = () => {
     if (!currentWorkspace?.slug) {
       toast.error("Workspace not ready yet")
       return
     }
-
     navigate(`/workspaces/${currentWorkspace.slug}`)
-  }
-
-  const copyInviteLink = async () => {
-    await navigator.clipboard.writeText(inviteLink)
-    toast.success("Invite link copied")
   }
 
   return (
@@ -62,42 +75,64 @@ export function AddTeamMembersScreen({ workspaceName }) {
           Who else is on {workspaceName}?
         </h1>
 
-        {/* Email invite */}
-        <div className="flex gap-2">
-          <Mail className="mt-2" />
-          <Input
-            placeholder="Enter email"
-            value={currentEmail}
-            onChange={(e) => setCurrentEmail(e.target.value)}
-          />
-          <Button onClick={addEmail}>Add</Button>
-        </div>
-
-        {/* Invite link */}
+        {/* ================= Email Invites ================= */}
         <div className="space-y-2">
-          <Label>Invite via link</Label>
+          <Label>Invite via email</Label>
+          <div className="flex gap-2">
+            <Mail className="mt-2" />
+            <Input
+              placeholder="Enter email"
+              value={currentEmail}
+              onChange={(e) => setCurrentEmail(e.target.value)}
+            />
+            <Button onClick={addEmail}>Add</Button>
+          </div>
 
-          {inviteLink ? (
-            <div className="flex gap-2">
-              <Input value={inviteLink} readOnly />
-              <Button variant="outline" onClick={copyInviteLink}>
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-          ) : (
-            <Button
-              variant="outline"
-              onClick={handleGenerateInvite}
-              disabled={isLoading}
-            >
-              {isLoading ? "Generating..." : "Generate invite link"}
-            </Button>
+          {emails.length > 0 && (
+            <p className="text-sm text-muted-foreground">
+              Will send invite to: {emails.join(", ")}
+            </p>
           )}
         </div>
 
+        {/* ================= Invite Link ================= */}
+        <div className="space-y-2">
+          <Label>Invite via link</Label>
+
+          {invite.link ? (
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <Input value={invite.link} readOnly />
+                <Button variant="outline" onClick={copyInviteLink}>
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Expires on {new Date(invite.expiresAt).toLocaleString()}
+              </p>
+            </div>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                onClick={handleGenerateInvite}
+                disabled={isLoading}
+              >
+                {isLoading ? "Sending invites..." : "Send invites"}
+              </Button>
+
+              <p className="text-xs text-muted-foreground">
+                This will send email invites and generate a shareable link
+              </p>
+            </>
+          )}
+        </div>
+
+
         <Button className="w-full" onClick={handleFinishSetup}>
-        Finish setup
-      </Button>
+          Finish setup
+        </Button>
       </Card>
     </div>
   )

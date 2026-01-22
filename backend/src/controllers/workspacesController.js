@@ -79,57 +79,75 @@ const getAllWorkspaces = async (req, res) => {
 
 
 
-
 // Generate invite link controller
 const generateInviteLink = async (req, res) => {
-    try {
-        const { workspaceId } = req.params;
-        const userId = req.user.userId;
-        const { expiryHours = 168, email } = req.body;
+  try {
+    const { workspaceId } = req.params
+    const userId = req.user.userId
+    const { expiryHours = 168, email, emails } = req.body
 
-        const workspace = await Workspace.findById(workspaceId);
-        if (!workspace) {
-            return res.status(404).json({ message: 'Workspace not found' });
-        }
-
-        const member = workspace.members.find(m => m.user.toString() === userId);
-        if (!member || (member.role !== 'admin' && workspace.owner.toString() !== userId)) {
-            return res.status(403).json({ message: 'Only admins can generate invite links' });
-        }
-
-        const inviteToken = crypto.randomBytes(32).toString('hex');
-        const inviteTokenExpiry = new Date(Date.now() + expiryHours * 60 * 60 * 1000);
-
-        workspace.inviteToken = inviteToken;
-        workspace.inviteTokenExpiry = inviteTokenExpiry;
-        await workspace.save();
-
-        const inviteLink = `${req.protocol}://${req.get('host')}/api/workspaces/join/${inviteToken}`;
-
-        // ✅ Optional email sending
-        if (email) {
-            await sendEmail({
-                to: email,
-                subject: "You're invited to join a workspace",
-                html: `
-                  <p>You’ve been invited to join a workspace.</p>
-                  <p><a href="${inviteLink}">Accept Invite</a></p>
-                  <p>This link expires on ${inviteTokenExpiry.toLocaleString()}.</p>
-                `
-            });
-        }
-
-        res.status(200).json({
-            message: 'Invite link generated successfully',
-            inviteToken,
-            inviteLink,
-            expiresAt: inviteTokenExpiry,
-            emailSent: !!email
-        });
-    } catch (err) {
-        res.status(500).json({ message: 'Server error', error: err.message });
+    const workspace = await Workspace.findById(workspaceId)
+    if (!workspace) {
+      return res.status(404).json({ message: "Workspace not found" })
     }
-};
+
+    const member = workspace.members.find(
+      (m) => m.user.toString() === userId
+    )
+    if (!member || (member.role !== "admin" && workspace.owner.toString() !== userId)) {
+      return res
+        .status(403)
+        .json({ message: "Only admins can generate invite links" })
+    }
+
+    const inviteToken = crypto.randomBytes(32).toString("hex")
+    const inviteTokenExpiry = new Date(
+      Date.now() + expiryHours * 60 * 60 * 1000
+    )
+
+    workspace.inviteToken = inviteToken
+    workspace.inviteTokenExpiry = inviteTokenExpiry
+    await workspace.save()
+
+    const inviteLink = `${req.protocol}://${req.get(
+      "host"
+    )}/api/workspaces/join/${inviteToken}`
+
+    // ✅ Handle single OR multiple emails
+    const recipients = emails
+      ? emails
+      : email
+      ? [email]
+      : []
+
+    for (const to of recipients) {
+      await sendEmail({
+        to,
+        subject: "You're invited to join a workspace",
+        html: `
+          <p>You’ve been invited to join a workspace.</p>
+          <p><a href="${inviteLink}">Accept Invite</a></p>
+          <p>This link expires on ${inviteTokenExpiry.toLocaleString()}.</p>
+        `,
+      })
+    }
+
+    res.status(200).json({
+      message: "Invite link generated successfully",
+      inviteToken,
+      inviteLink,
+      expiresAt: inviteTokenExpiry,
+      emailSent: recipients.length > 0,
+      emailsSent: recipients.length,
+    })
+  } catch (err) {
+    res.status(500).json({
+      message: "Server error",
+      error: err.message,
+    })
+  }
+}
+
 
 
 
