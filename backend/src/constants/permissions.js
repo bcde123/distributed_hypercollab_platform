@@ -1,8 +1,11 @@
 const PERMISSIONS = {
     MANAGE_WORKSPACE: 'manage_workspace',
     CREATE_BOARD: 'create_board',
+    UPDATE_BOARD: 'update_board',
     DELETE_BOARD: 'delete_board',
     CREATE_TASK: 'create_task',
+    UPDATE_TASK: 'update_task',
+    DELETE_TASK: 'delete_task',
     COMMENT_TASK: 'comment_task',
     VIEW_CONTENT: 'view_content'
 };
@@ -13,7 +16,10 @@ const ROLE_PERMISSIONS = {
     admin: Object.values(PERMISSIONS), // Admins can do everything
     member: [
         PERMISSIONS.CREATE_BOARD,
+        PERMISSIONS.UPDATE_BOARD,
         PERMISSIONS.CREATE_TASK,
+        PERMISSIONS.UPDATE_TASK,
+        PERMISSIONS.DELETE_TASK,
         PERMISSIONS.COMMENT_TASK,
         PERMISSIONS.VIEW_CONTENT
     ],

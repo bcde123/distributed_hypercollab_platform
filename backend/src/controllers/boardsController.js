@@ -108,6 +108,34 @@ const getFullBoard = async (req, res) => {
 };
 
 
+// Update board controller
+const updateBoard = async (req, res) => {
+  try {
+    const { boardId, workspaceId } = req.params;
+    const { title, background } = req.body;
+
+    // Build update object
+    const updateData = {};
+    if (title !== undefined) updateData.title = title.trim();
+    if (background !== undefined) updateData.background = background;
+
+    const board = await Board.findOneAndUpdate(
+      { _id: boardId, workspace: workspaceId, isClosed: false },
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
+
+    if (!board) {
+      return res.status(404).json({ message: "Board not found or closed" });
+    }
+
+    res.json({ message: "Board updated successfully", board });
+  } catch (error) {
+    res.status(500).json({ message: "Server error during update", error: error.message });
+  }
+};
+
+
 // Delete board controller
 const deleteBoard = async (req, res) => {
   try {
@@ -135,5 +163,6 @@ module.exports = {
     getBoardsByWorkspace,
     getBoardById,
     getFullBoard,
+    updateBoard,
     deleteBoard
 };

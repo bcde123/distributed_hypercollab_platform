@@ -90,7 +90,7 @@ const refreshToken = async (req, res) => {
     const cookies = req.cookies;
 
     // 1. Check for refresh token in cookies
-    if(!cookies?.jwt) return res.status(401);
+    if(!cookies?.jwt) return res.status(401).json({ message: 'No token provided' });
 
     const incomingRefreshToken = cookies.jwt;
 

@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
+const listsRouter = require('./lists');
+const tasksRouter = require('./tasks');
 const { PERMISSIONS } = require('../constants/permissions');
 const checkPermission = require('../middleware/rbac');
 const { verifyAccessToken } = require('../middleware/auth');
@@ -38,12 +40,12 @@ router.get(
 );
 
 // Update board
-// router.put(
-//   '/:boardId',
-//   verifyAccessToken,
-//   checkPermission(PERMISSIONS.UPDATE_BOARD),
-//   boardsController.updateBoard
-// );
+router.put(
+  '/:boardId',
+  verifyAccessToken,
+  checkPermission(PERMISSIONS.UPDATE_BOARD),
+  boardsController.updateBoard
+);
 
 // Close / archive board (soft delete)
 router.patch(
@@ -52,5 +54,10 @@ router.patch(
   checkPermission(PERMISSIONS.DELETE_BOARD),
   boardsController.deleteBoard
 );
+// Mount lists router
+router.use('/:boardId/lists', listsRouter);
+
+// Mount tasks router
+router.use('/:boardId/tasks', tasksRouter);
 
 module.exports = router;

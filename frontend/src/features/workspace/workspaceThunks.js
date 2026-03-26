@@ -92,3 +92,42 @@ export const getWorkspaceBySlug = createAsyncThunk(
     }
   }
 );
+
+/* ================= UPDATE MEMBER ROLE ================= */
+export const updateMemberRole = createAsyncThunk(
+  "workspace/updateMemberRole",
+  async ({ workspaceId, userId, role }, { getState, rejectWithValue }) => {
+    try {
+      const token = getState().auth.accessToken;
+      const res = await api.put(
+        `/workspaces/${workspaceId}/members/${userId}/role`,
+        { role },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      // The backend returns the updated workspace
+      return res.data.workspace;
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data?.message || "Failed to update member role"
+      );
+    }
+  }
+);
+
+/* ================= REMOVE MEMBER ================= */
+export const removeMember = createAsyncThunk(
+  "workspace/removeMember",
+  async ({ workspaceId, userId }, { getState, rejectWithValue }) => {
+    try {
+      const token = getState().auth.accessToken;
+      await api.delete(`/workspaces/${workspaceId}/members/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return { workspaceId, userId };
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data?.message || "Failed to remove member"
+      );
+    }
+  }
+);

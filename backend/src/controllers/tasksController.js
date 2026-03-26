@@ -1,0 +1,91 @@
+const Task = require('../models/Tasks');
+const Board = require('../models/Board');
+
+// Create a new task
+const createTask = async (req, res) => {
+  try {
+    const { boardId, workspaceId, listId } = req.params;
+    const { title, description } = req.body;
+
+    if (!title?.trim()) {
+      return res.status(400).json({ message: "Task title is required" });
+    }
+
+    // Verify board and list exist
+    const board = await Board.findOne({ _id: boardId, workspace: workspaceId });
+    if (!board) return res.status(404).json({ message: "Board not found" });
+    
+    const list = board.lists.id(listId);
+    if (!list) return res.status(404).json({ message: "List not found" });
+
+    // Generate simple rank (timestamp-based for appending)
+    const rank = Date.now().toString();
+
+    const task = await Task.create({
+      workspace: workspaceId,
+      board: boardId,
+      listId: listId,
+      title: title.trim(),
+      description: description || '',
+      rank,
+      reporter: req.user.userId,
+    });
+
+    res.status(201).json({ task, message: "Task created successfully" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Update task (title, description, or moving between lists)
+const updateTask = async (req, res) => {
+  try {
+    const { boardId, workspaceId, taskId } = req.params;
+    const { title, description, listId, rank, status } = req.body;
+
+    const updateData = {};
+    if (title !== undefined) updateData.title = title.trim();
+    if (description !== undefined) updateData.description = description.trim();
+    if (listId !== undefined) updateData.listId = listId;
+    if (rank !== undefined) updateData.rank = rank;
+    if (status !== undefined) updateData.status = status;
+
+    const task = await Task.findOneAndUpdate(
+      { _id: taskId, board: boardId, workspace: workspaceId },
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
+
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+
+    res.json({ task, message: "Task updated successfully" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Delete (archive) task
+const deleteTask = async (req, res) => {
+  try {
+    const { boardId, workspaceId, taskId } = req.params;
+
+    // We can either hard delete or soft delete. Let's hard delete for simplicity.
+    const task = await Task.findOneAndDelete({ _id: taskId, board: boardId, workspace: workspaceId });
+
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+
+    res.json({ message: "Task deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+module.exports = {
+  createTask,
+  updateTask,
+  deleteTask
+};

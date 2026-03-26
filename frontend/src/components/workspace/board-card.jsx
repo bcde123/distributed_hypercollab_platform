@@ -1,4 +1,5 @@
 import { Clock, ListTodo } from "lucide-react"
+import { Link } from "react-router-dom"
 import {
   Card,
   CardContent,
@@ -9,18 +10,24 @@ import {
 import { Badge } from "@/components/ui/badge"
 
 export function BoardCard({
-  name,
+  _id,
+  title, // Changed from name
+  background,
   description,
-  taskCount,
-  lastUpdated,
+  taskCount = 0,
+  updatedAt,
+  workspaceSlug,
   isReadOnly = false,
 }) {
+  const lastUpdated = updatedAt ? new Date(updatedAt).toLocaleDateString() : "Just now";
+
   return (
-    <Card className="group cursor-pointer transition-all hover:shadow-md hover:border-indigo-200">
+    <Link to={`/workspaces/${workspaceSlug}/boards/${_id}`} className="block">
+      <Card className="group cursor-pointer transition-all hover:shadow-md hover:border-indigo-200 h-full">
       <CardHeader>
         <div className="flex items-start justify-between">
           <CardTitle className="text-lg text-neutral-900 group-hover:text-indigo-700">
-            {name}
+            {title}
           </CardTitle>
           {isReadOnly && (
             <Badge variant="secondary" className="text-xs">
@@ -46,5 +53,6 @@ export function BoardCard({
         </div>
       </CardContent>
     </Card>
+    </Link>
   )
 }

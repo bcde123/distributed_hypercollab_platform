@@ -4,6 +4,7 @@ import LoginPage from "@/pages/auth/LoginPage"
 import SignupPage from "@/pages/auth/SignupPage"
 import WorkspacePage from "@/pages/workspace/workspace"
 import Onboarding from "@/pages/workspace/Onboarding"
+import BoardPage from "@/pages/board/board"
 import PrivateRoute from "./PrivateRoute"
 
 export default function AppRouter() {
@@ -21,6 +22,11 @@ export default function AppRouter() {
         <Route path="/workspaces/:slug" element={
           <PrivateRoute>
             <WorkspacePage />
+          </PrivateRoute>
+        }/>
+        <Route path="/workspaces/:slug/boards/:boardId" element={
+          <PrivateRoute>
+            <BoardPage />
           </PrivateRoute>
         }/>
       </Routes>

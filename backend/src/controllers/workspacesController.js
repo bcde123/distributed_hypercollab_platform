@@ -266,11 +266,108 @@ const getInviteLinkDetails = async (req, res) => {
     }
 };
 
+// Update member role
+const updateMemberRole = async (req, res) => {
+    try {
+        const { workspaceId, userId } = req.params;
+        const { role } = req.body;
+        const requesterId = req.user.userId;
+
+        const workspace = await Workspace.findById(workspaceId);
+        if (!workspace) return res.status(404).json({ message: 'Workspace not found' });
+
+        // Check permissions: only admin or owner can change roles
+        const requesterMember = workspace.members.find(m => m.user.toString() === requesterId);
+        if (!requesterMember || (requesterMember.role !== 'admin' && workspace.owner.toString() !== requesterId)) {
+            return res.status(403).json({ message: 'Not authorized' });
+        }
+
+        // Prevent changing owner's role
+        if (workspace.owner.toString() === userId) {
+            return res.status(400).json({ message: 'Cannot change owner role' });
+        }
+
+        const targetMember = workspace.members.find(m => m.user.toString() === userId);
+        if (!targetMember) return res.status(404).json({ message: 'User not in workspace' });
+
+        if (!['admin', 'member', 'viewer'].includes(role)) {
+            return res.status(400).json({ message: 'Invalid role' });
+        }
+
+        targetMember.role = role;
+        await workspace.save();
+
+        // Also update the nested role in the User document
+        await User.updateOne(
+            { _id: userId, 'workspaces.workspaceId': workspaceId },
+            { $set: { 'workspaces.$.role': role } }
+        );
+
+        res.status(200).json({ message: 'Role updated successfully', workspace });
+    } catch (err) {
+        res.status(500).json({ message: 'Server error', error: err.message });
+    }
+};
+
+// Remove member
+const removeMember = async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        const { workspaceId, userId } = req.params;
+        const requesterId = req.user.userId;
+
+        const workspace = await Workspace.findById(workspaceId).session(session);
+        if (!workspace) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(404).json({ message: 'Workspace not found' });
+        }
+
+        // Check permissions: admin/owner can remove others. Users can remove themselves.
+        const requesterMember = workspace.members.find(m => m.user.toString() === requesterId);
+        const isAdmin = requesterMember && (requesterMember.role === 'admin' || workspace.owner.toString() === requesterId);
+        
+        if (requesterId !== userId && !isAdmin) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(403).json({ message: 'Not authorized' });
+        }
+
+        // Prevent removing the owner
+        if (workspace.owner.toString() === userId) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(400).json({ message: 'Cannot remove the workspace owner' });
+        }
+
+        // Remove from workspace
+        workspace.members = workspace.members.filter(m => m.user.toString() !== userId);
+        await workspace.save({ session });
+
+        // Remove workspace from user's workspaces array
+        await User.findByIdAndUpdate(userId, {
+            $pull: { workspaces: { workspaceId } }
+        }, { session });
+
+        await session.commitTransaction();
+        session.endSession();
+
+        res.status(200).json({ message: 'Member removed successfully' });
+    } catch (err) {
+        await session.abortTransaction();
+        session.endSession();
+        res.status(500).json({ message: 'Server error', error: err.message });
+    }
+};
+
 module.exports = {
     createWorkspace,
     getAllWorkspaces,
     generateInviteLink,
     getWorkspaceBySlug,
     joinWorkspace,
-    getInviteLinkDetails
+    getInviteLinkDetails,
+    updateMemberRole,
+    removeMember
 };

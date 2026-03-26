@@ -18,8 +18,12 @@ router.post('/workspaces/join/:inviteToken', verifyAccessToken, workspacesContro
 // Get invite link details (without authentication - for preview)
 router.get('/workspaces/invite/:inviteToken', workspacesController.getInviteLinkDetails);
 
-router.get("/workspaces/slug/:slug", verifyAccessToken,workspacesController.getWorkspaceBySlug);
+router.get("/workspaces/slug/:slug", verifyAccessToken, workspacesController.getWorkspaceBySlug);
 
+// Update a member's role
+router.put('/workspaces/:workspaceId/members/:userId/role', verifyAccessToken, workspacesController.updateMemberRole);
 
+// Remove a member from the workspace
+router.delete('/workspaces/:workspaceId/members/:userId', verifyAccessToken, workspacesController.removeMember);
 
 module.exports = router;

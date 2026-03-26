@@ -1,16 +1,14 @@
-import { LayoutGrid, MessageSquare, BarChart3 } from "lucide-react"
+import { LayoutGrid, MessageSquare, BarChart3, Users } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useState } from "react"
 
 const navigation = [
   { name: "Boards", icon: LayoutGrid, id: "boards" },
-  { name: "Chat", icon: MessageSquare, id: "chat" },
+  { name: "Members", icon: Users, id: "members" },
   { name: "Analytics", icon: BarChart3, id: "analytics" },
+  { name: "Chat", icon: MessageSquare, id: "chat" },
 ]
 
-export function Sidebar( {onChatToggle} ) {
-  const [activeTab, setActiveTab] = useState("boards")
-
+export function Sidebar({ activeTab, onTabChange, onChatToggle }) {
   return (
     <aside className="w-64 border-r border-neutral-200 bg-white">
       <div className="flex h-full flex-col">
@@ -30,10 +28,13 @@ export function Sidebar( {onChatToggle} ) {
             return (
               <button
                 key={item.id}
-                onClick={() => {setActiveTab(item.id)
-                     if (item.id === "chat" && onChatToggle) {
+                onClick={() => {
+                  if (item.id === "chat" && onChatToggle) {
                     onChatToggle()
-                  }}}
+                  } else if (onTabChange && item.id !== "chat") {
+                    onTabChange(item.id)
+                  }
+                }}
                 className={cn(
                   "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                   isActive
