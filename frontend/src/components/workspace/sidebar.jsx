@@ -29,9 +29,7 @@ export function Sidebar({ activeTab, onTabChange, onChatToggle }) {
               <button
                 key={item.id}
                 onClick={() => {
-                  if (item.id === "chat" && onChatToggle) {
-                    onChatToggle()
-                  } else if (onTabChange && item.id !== "chat") {
+                  if (onTabChange) {
                     onTabChange(item.id)
                   }
                 }}

@@ -1,7 +1,7 @@
-import Message from "../models/Message.js";
-import Chat from "../models/Chat.js";
+const Message = require("../models/Message");
+const Chat = require("../models/Chat");
 
-export const sendMessage = async (req, res) => {
+const sendMessage = async (req, res) => {
   try {
     const { chatId, content } = req.body;
     console.log("USER:", req.user);
@@ -16,17 +16,16 @@ export const sendMessage = async (req, res) => {
 
     const message = await Message.create({
       chatId,
-      sender: req.user.id,
+      sender: req.user.userId,
       content,
     });
 
-
     if (global.wss) {
-        global.wss.clients.forEach((client) => {
-            if (client.readyState === 1) {
-            client.send(JSON.stringify(message));
-            }
-        });
+      global.wss.clients.forEach((client) => {
+        if (client.readyState === 1) {
+          client.send(JSON.stringify(message));
+        }
+      });
     }
 
     return res.status(201).json(message);
@@ -36,7 +35,7 @@ export const sendMessage = async (req, res) => {
   }
 };
 
-export const getMessages = async (req, res) => {
+const getMessages = async (req, res) => {
   try {
     const { chatId } = req.params;
 
@@ -50,3 +49,5 @@ export const getMessages = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+module.exports = { sendMessage, getMessages };

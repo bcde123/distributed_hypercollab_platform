@@ -26,7 +26,6 @@ export default function WorkspacePage() {
 
   const userRole = "member" // later from backend
   const canCreateBoard = userRole !== "viewer"
-  const [isChatOpen, setIsChatOpen] = useState(true)
   const [activeTab, setActiveTab] = useState("boards")
   const [isBoardModalOpen, setIsBoardModalOpen] = useState(false)
 
@@ -64,12 +63,11 @@ export default function WorkspacePage() {
       <Sidebar 
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        onChatToggle={() => setIsChatOpen(!isChatOpen)} 
       />
 
-      <main className="flex-1 overflow-auto p-8">
+      <main className="flex-1 overflow-auto">
         {activeTab === "boards" && (
-          <>
+          <div className="p-8">
             <div className="mb-8 flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-semibold text-neutral-900">
@@ -116,11 +114,17 @@ export default function WorkspacePage() {
               onClose={() => setIsBoardModalOpen(false)} 
               onSubmit={handleCreateBoard} 
             />
-          </>
+          </div>
         )}
 
         {activeTab === "members" && (
-          <MembersList />
+          <div className="p-8">
+            <MembersList />
+          </div>
+        )}
+
+        {activeTab === "chat" && (
+          <ChatPanel />
         )}
         
         {activeTab === "analytics" && (
@@ -129,12 +133,6 @@ export default function WorkspacePage() {
           </div>
         )}
       </main>
-
-      {isChatOpen && (
-        <aside className="w-80 border-l border-neutral-200 bg-white">
-          <ChatPanel />
-        </aside>
-      )}
     </div>
   )
 }
