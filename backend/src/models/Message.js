@@ -12,8 +12,12 @@ const messageSchema = new mongoose.Schema(
       ref: "User",
     },
     content: {
-      type: String, // later → encrypted
+      type: String,
       required: true,
+    },
+    nonce: {
+      type: String,
+      default: null,
     },
   },
   { timestamps: true }

@@ -30,7 +30,9 @@ const authSlice = createSlice({
       .addCase(checkAuth.fulfilled, (state, action) => {
         state.isLoading = false;
         state.isAuthenticated = true;
-        state.user = action.payload.user;
+        // Normalize: verifyToken returns 'userId', login returns '_id'
+        const user = action.payload.user;
+        state.user = { ...user, _id: user._id || user.userId };
         state.accessToken = action.payload.accessToken;
       })
       .addCase(checkAuth.rejected, (state) => {

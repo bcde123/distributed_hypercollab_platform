@@ -43,6 +43,10 @@ const userSchema = new Schema({
             default: Date.now
         }
     }],
+    publicKey: {
+        type: String,
+        default: null,
+    },
     profile: {
         avatarUrl: {
             type: String,

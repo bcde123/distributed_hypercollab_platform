@@ -1,28 +1,23 @@
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import AppRouter from "./router/AppRouter";
 import { Toaster } from "sonner";
 import { checkAuth } from "./features/auth/authThunks";
 import { useEffect } from "react";
-// import { initOQS } from "./crypto/crypto";
-import {
-  generateKEMKeyPair,
-  encapsulateSecret,
-  decapsulateSecret,
-} from "./crypto/crypto";
+import { addIncomingMessage } from "./features/chat/chatSlice";
+import { decryptMessage } from "./crypto/crypto";
+import { getSharedSecret } from "./crypto/keyStore";
 
 
 export default function App() {
   const dispatch = useDispatch();
+  const currentUserId = useSelector((state) => state.auth.user?._id);
 
-
-
-
-  // ✅ Existing auth check (KEEP AS IS)
+  // ✅ Auth check on mount (also triggers Kyber keypair generation)
   useEffect(() => {
     dispatch(checkAuth());
   }, [dispatch]);
 
-  // 🔥 ADD THIS (WebSocket connection)
+  // 🔥 WebSocket connection → Redux bridge (with E2E decryption)
   useEffect(() => {
     const socket = new WebSocket("ws://localhost:8080");
 
@@ -30,9 +25,39 @@ export default function App() {
       console.log("✅ Connected to WS");
     };
 
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      console.log("📩 New message:", data);
+    socket.onmessage = async (event) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        if (data.type === "NEW_MESSAGE" && data.message) {
+          const msg = data.message;
+
+          // Don't dispatch our own messages (they're already in Redux from sendMessage thunk)
+          const senderId = typeof msg.sender === "object" ? msg.sender._id : msg.sender;
+          if (senderId === currentUserId) return;
+
+          // Decrypt if message has a nonce (E2E encrypted)
+          if (msg.nonce && msg.chatId) {
+            const secret = getSharedSecret(msg.chatId);
+            if (secret) {
+              try {
+                const plaintext = await decryptMessage(msg.content, msg.nonce, secret);
+                dispatch(addIncomingMessage({ ...msg, content: plaintext, _encrypted: false }));
+              } catch (err) {
+                console.error("🔓 WS decrypt failed:", err);
+                dispatch(addIncomingMessage({ ...msg, content: "🔒 Unable to decrypt", _encrypted: true }));
+              }
+            } else {
+              dispatch(addIncomingMessage({ ...msg, content: "🔒 Encrypted (key not available)", _encrypted: true }));
+            }
+          } else {
+            // Plaintext message (channels or unencrypted DMs)
+            dispatch(addIncomingMessage(msg));
+          }
+        }
+      } catch (err) {
+        console.error("WS parse error:", err);
+      }
     };
 
     socket.onclose = () => {
@@ -42,33 +67,8 @@ export default function App() {
     return () => {
       socket.close();
     };
-  }, []);
+  }, [dispatch, currentUserId]);
 
-  // useEffect(() => {
-  //   console.log("Initializing OQS...");
-
-  //   initOQS()
-  //     .then((mod) => {
-  //       console.log("✅ OQS Loaded:", mod);
-  //     })
-  //     .catch((err) => {
-  //       console.error("❌ OQS Error:", err);
-  //     });
-  // }, []);
-
-
-  useEffect(() => {
-    (async () => {
-      const userA = await generateKEMKeyPair();
-      const userB = await generateKEMKeyPair();
-
-      const enc = await encapsulateSecret(userB.pk);
-      const dec = await decapsulateSecret(enc.kemCipherText, userB.sk);
-
-      console.log("Sender secret:", enc.sharedSecret.slice(0, 20));
-      console.log("Receiver secret:", dec.slice(0, 20));
-    })();
-  }, []);
   return (
     <>
       <AppRouter />

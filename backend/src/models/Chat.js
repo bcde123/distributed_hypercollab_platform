@@ -7,6 +7,11 @@ const chatSchema = new mongoose.Schema(
       enum: ["dm", "channel"],
       required: true,
     },
+    name: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     members: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -20,6 +25,17 @@ const chatSchema = new mongoose.Schema(
     isEncrypted: {
       type: Boolean,
       default: false,
+    },
+    // Kyber KEM ciphertext — used by the receiver to derive the shared secret
+    kemCipherText: {
+      type: String,
+      default: null,
+    },
+    // Who performed the encapsulation (the other member decapsulates)
+    initiator: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
     },
   },
   { timestamps: true }
