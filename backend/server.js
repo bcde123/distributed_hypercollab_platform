@@ -27,6 +27,19 @@ mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('MongoDB connected'))
     .catch(err => console.log('MongoDB connection error:', err));
 
+// Kafka Producer Connection
+const { connectProducer, disconnectKafka } = require('./src/config/kafka');
+connectProducer();
+
+// Graceful shutdown
+const shutdown = async (signal) => {
+    console.log(`\n${signal} received — shutting down gracefully`);
+    await disconnectKafka();
+    process.exit(0);
+};
+process.on('SIGINT',  () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+
 // Routes
 app.use('/api/auth', router);
 app.use('/api', workspaceRoutes);

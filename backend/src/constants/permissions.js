@@ -7,7 +7,8 @@ const PERMISSIONS = {
     UPDATE_TASK: 'update_task',
     DELETE_TASK: 'delete_task',
     COMMENT_TASK: 'comment_task',
-    VIEW_CONTENT: 'view_content'
+    VIEW_CONTENT: 'view_content',
+    READ_ANALYTICS: 'read_analytics'
 };
 
 // Map Roles to Capabilities
@@ -21,11 +22,13 @@ const ROLE_PERMISSIONS = {
         PERMISSIONS.UPDATE_TASK,
         PERMISSIONS.DELETE_TASK,
         PERMISSIONS.COMMENT_TASK,
-        PERMISSIONS.VIEW_CONTENT
+        PERMISSIONS.VIEW_CONTENT,
+        PERMISSIONS.READ_ANALYTICS
     ],
     viewer: [
         PERMISSIONS.COMMENT_TASK,
-        PERMISSIONS.VIEW_CONTENT
+        PERMISSIONS.VIEW_CONTENT,
+        PERMISSIONS.READ_ANALYTICS
     ]
 };
 

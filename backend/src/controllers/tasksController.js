@@ -1,6 +1,7 @@
 const Task = require('../models/Tasks');
 const Board = require('../models/Board');
 const { broadcastToRoom } = require('../utils/wsBroadcast');
+const { emitTaskEvent } = require('../utils/eventEmitter');
 
 // Create a new task
 const createTask = async (req, res) => {
@@ -38,6 +39,14 @@ const createTask = async (req, res) => {
     broadcastToRoom(workspaceId, {
       type: 'TASK_CREATED',
       payload: { task, boardId, listId },
+    });
+
+    // Fire-and-forget Kafka event (never await after res is sent)
+    emitTaskEvent('task_created', {
+      taskId: task._id,
+      workspaceId,
+      boardId,
+      listId,
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -82,6 +91,25 @@ const updateTask = async (req, res) => {
         oldListId: oldTask?.listId || null,
       },
     });
+
+    // Fire-and-forget Kafka events (never await after res is sent)
+    emitTaskEvent('task_updated', {
+      taskId: task._id,
+      workspaceId,
+      boardId,
+      listId: task.listId,
+    });
+
+    // Dedicated completion event for analytics (status transition → Completed)
+    if (task.status === 'Completed' && oldTask?.status !== 'Completed') {
+      emitTaskEvent('task_completed', {
+        taskId: task._id,
+        workspaceId,
+        boardId,
+        assignees: task.assignees,
+        completedAt: Date.now(),
+      });
+    }
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -109,6 +137,14 @@ const deleteTask = async (req, res) => {
         boardId,
         listId: task.listId,
       },
+    });
+
+    // Fire-and-forget Kafka event (never await after res is sent)
+    emitTaskEvent('task_deleted', {
+      taskId,
+      workspaceId,
+      boardId,
+      listId: task.listId,
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
