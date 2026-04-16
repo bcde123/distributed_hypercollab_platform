@@ -1,4 +1,4 @@
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import AppRouter from "./router/AppRouter";
 import { Toaster } from "sonner";
 import { checkAuth } from "./features/auth/authThunks";
@@ -9,40 +9,17 @@ import {
   encapsulateSecret,
   decapsulateSecret,
 } from "./crypto/crypto";
+import { WebSocketProvider } from "./context/WebSocketProvider";
 
 
 export default function App() {
   const dispatch = useDispatch();
-
-
-
+  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
 
   // ✅ Existing auth check (KEEP AS IS)
   useEffect(() => {
     dispatch(checkAuth());
   }, [dispatch]);
-
-  // 🔥 ADD THIS (WebSocket connection)
-  useEffect(() => {
-    const socket = new WebSocket("ws://localhost:8080");
-
-    socket.onopen = () => {
-      console.log("✅ Connected to WS");
-    };
-
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      console.log("📩 New message:", data);
-    };
-
-    socket.onclose = () => {
-      console.log("❌ WS disconnected");
-    };
-
-    return () => {
-      socket.close();
-    };
-  }, []);
 
   // useEffect(() => {
   //   console.log("Initializing OQS...");
@@ -69,9 +46,17 @@ export default function App() {
       console.log("Receiver secret:", dec.slice(0, 20));
     })();
   }, []);
+
   return (
     <>
-      <AppRouter />
+      {/* WebSocket connects only when user is authenticated */}
+      {isAuthenticated ? (
+        <WebSocketProvider>
+          <AppRouter />
+        </WebSocketProvider>
+      ) : (
+        <AppRouter />
+      )}
       <Toaster richColors position="top-right" />
     </>
   );

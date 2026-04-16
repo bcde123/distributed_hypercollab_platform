@@ -7,6 +7,11 @@ const chatSchema = new mongoose.Schema(
       enum: ["dm", "channel"],
       required: true,
     },
+    name: {
+      type: String,
+      trim: true,
+      default: "",            // Used for channels; DMs derive display name from members
+    },
     members: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -15,14 +20,24 @@ const chatSchema = new mongoose.Schema(
     ],
     workspaceId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Workspace",
+      ref: "workspace",
     },
     isEncrypted: {
       type: Boolean,
       default: false,
     },
+    lastMessage: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Message",
+      default: null,
+    },
   },
   { timestamps: true }
 );
+
+// Index for fast lookups of chats by workspace
+chatSchema.index({ workspaceId: 1 });
+// Index for finding DMs between two users
+chatSchema.index({ members: 1, type: 1 });
 
 module.exports = mongoose.model("Chat", chatSchema);
