@@ -23,7 +23,76 @@ const boardSlice = createSlice({
     loading: false,
     error: null,
   },
-  reducers: {},
+  reducers: {
+    // ── WebSocket-driven real-time reducers ─────────────────────────────
+    ws_taskCreated(state, action) {
+      const { task, boardId, listId } = action.payload;
+      if (!state.fullBoard) return;
+      if (state.fullBoard.board._id !== boardId) return;
+
+      if (!state.fullBoard.tasksByList[listId]) {
+        state.fullBoard.tasksByList[listId] = [];
+      }
+      // Dedup: don't re-add if already present (e.g. the user who created it)
+      const exists = state.fullBoard.tasksByList[listId].some(t => t._id === task._id);
+      if (!exists) {
+        state.fullBoard.tasksByList[listId].push(task);
+      }
+    },
+
+    ws_taskUpdated(state, action) {
+      const { task, boardId, oldListId } = action.payload;
+      if (!state.fullBoard) return;
+      if (state.fullBoard.board._id !== boardId) return;
+
+      const newListId = task.listId;
+
+      // Remove from old list (search all lists if oldListId not provided)
+      const listsToSearch = oldListId
+        ? [oldListId]
+        : Object.keys(state.fullBoard.tasksByList);
+
+      for (const lId of listsToSearch) {
+        const arr = state.fullBoard.tasksByList[lId];
+        if (!arr) continue;
+        const idx = arr.findIndex(t => t._id === task._id);
+        if (idx !== -1) {
+          arr.splice(idx, 1);
+          break;
+        }
+      }
+
+      // Add to new list
+      if (!state.fullBoard.tasksByList[newListId]) {
+        state.fullBoard.tasksByList[newListId] = [];
+      }
+      // Dedup
+      const alreadyThere = state.fullBoard.tasksByList[newListId].some(t => t._id === task._id);
+      if (!alreadyThere) {
+        state.fullBoard.tasksByList[newListId].push(task);
+      }
+    },
+
+    ws_taskDeleted(state, action) {
+      const { taskId, boardId, listId } = action.payload;
+      if (!state.fullBoard) return;
+      if (state.fullBoard.board._id !== boardId) return;
+
+      if (state.fullBoard.tasksByList[listId]) {
+        state.fullBoard.tasksByList[listId] = state.fullBoard.tasksByList[listId].filter(
+          t => t._id !== taskId
+        );
+      }
+    },
+
+    ws_boardCreated(state, action) {
+      const board = action.payload;
+      const exists = state.boards.some(b => b._id === board._id);
+      if (!exists) {
+        state.boards.push(board);
+      }
+    },
+  },
   extraReducers: (builder) => {
     builder
       /* ================= CREATE BOARD ================= */
@@ -176,5 +245,12 @@ const boardSlice = createSlice({
       });
   },
 });
+
+export const {
+  ws_taskCreated,
+  ws_taskUpdated,
+  ws_taskDeleted,
+  ws_boardCreated,
+} = boardSlice.actions;
 
 export default boardSlice.reducer;

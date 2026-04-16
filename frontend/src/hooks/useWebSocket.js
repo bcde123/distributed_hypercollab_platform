@@ -6,6 +6,12 @@ import {
   addTypingUser,
   removeTypingUser,
 } from "@/features/chat/chatSlice";
+import {
+  ws_taskCreated,
+  ws_taskUpdated,
+  ws_taskDeleted,
+  ws_boardCreated,
+} from "@/features/board/boardSlice";
 
 const WS_URL = "ws://localhost:5001/ws";
 const RECONNECT_DELAYS = [1000, 2000, 4000, 8000, 16000]; // Exponential backoff
@@ -45,8 +51,15 @@ export function useWebSocket() {
       reconnectAttempt.current = 0;
 
       // Re-join rooms that were previously joined
-      for (const chatId of joinedRooms.current) {
-        ws.send(JSON.stringify({ type: "join_room", payload: { chatId } }));
+      for (const roomKey of joinedRooms.current) {
+        if (roomKey.startsWith("ws:")) {
+          // Workspace room — extract workspaceId
+          const workspaceId = roomKey.slice(3);
+          ws.send(JSON.stringify({ type: "join_workspace", payload: { workspaceId } }));
+        } else {
+          // Chat room
+          ws.send(JSON.stringify({ type: "join_room", payload: { chatId: roomKey } }));
+        }
       }
     };
 
@@ -91,8 +104,25 @@ export function useWebSocket() {
           console.error("⚠️ WS error:", msg.payload.message);
           break;
 
+        // ── Live Task / Board Updates ────────────────────────────────
+        case "TASK_CREATED":
+          dispatch(ws_taskCreated(msg.payload));
+          break;
+
+        case "TASK_UPDATED":
+          dispatch(ws_taskUpdated(msg.payload));
+          break;
+
+        case "TASK_DELETED":
+          dispatch(ws_taskDeleted(msg.payload));
+          break;
+
+        case "BOARD_CREATED":
+          dispatch(ws_boardCreated(msg.payload));
+          break;
+
         default:
-          // joined_room, left_room, pong — no-op
+          // joined_room, left_room, joined_workspace, left_workspace, pong — no-op
           break;
       }
     };
@@ -156,6 +186,25 @@ export function useWebSocket() {
     [sendWsMessage]
   );
 
+  // ── Workspace rooms (live task updates) ─────────────────────────────
+  const joinWorkspace = useCallback(
+    (workspaceId) => {
+      const roomKey = `ws:${workspaceId}`;
+      joinedRooms.current.add(roomKey);
+      sendWsMessage("join_workspace", { workspaceId });
+    },
+    [sendWsMessage]
+  );
+
+  const leaveWorkspace = useCallback(
+    (workspaceId) => {
+      const roomKey = `ws:${workspaceId}`;
+      joinedRooms.current.delete(roomKey);
+      sendWsMessage("leave_workspace", { workspaceId });
+    },
+    [sendWsMessage]
+  );
+
   const sendChatMessage = useCallback(
     (chatId, content) => {
       sendWsMessage("send_message", { chatId, content });
@@ -181,6 +230,8 @@ export function useWebSocket() {
     sendWsMessage,
     joinRoom,
     leaveRoom,
+    joinWorkspace,
+    leaveWorkspace,
     sendChatMessage,
     sendTyping,
     stopTyping,

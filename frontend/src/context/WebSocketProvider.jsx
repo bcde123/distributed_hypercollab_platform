@@ -19,7 +19,7 @@ export function WebSocketProvider({ children }) {
 
 /**
  * Convenience hook — components call useWs() to get
- * { sendChatMessage, joinRoom, leaveRoom, sendTyping, stopTyping, isConnected }
+ * { sendChatMessage, joinRoom, leaveRoom, joinWorkspace, leaveWorkspace, sendTyping, stopTyping, isConnected }
  */
 export function useWs() {
   const ctx = useContext(WebSocketContext);

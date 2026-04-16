@@ -1,5 +1,6 @@
 const Task = require('../models/Tasks');
 const Board = require('../models/Board');
+const { broadcastToRoom } = require('../utils/wsBroadcast');
 
 // Create a new task
 const createTask = async (req, res) => {
@@ -32,6 +33,12 @@ const createTask = async (req, res) => {
     });
 
     res.status(201).json({ task, message: "Task created successfully" });
+
+    // Broadcast to all workspace clients in real-time
+    broadcastToRoom(workspaceId, {
+      type: 'TASK_CREATED',
+      payload: { task, boardId, listId },
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -42,6 +49,9 @@ const updateTask = async (req, res) => {
   try {
     const { boardId, workspaceId, taskId } = req.params;
     const { title, description, listId, rank, status } = req.body;
+
+    // Capture old task state before update (needed for list-move detection on client)
+    const oldTask = await Task.findOne({ _id: taskId, board: boardId, workspace: workspaceId }).lean();
 
     const updateData = {};
     if (title !== undefined) updateData.title = title.trim();
@@ -61,6 +71,17 @@ const updateTask = async (req, res) => {
     }
 
     res.json({ task, message: "Task updated successfully" });
+
+    // Broadcast to all workspace clients in real-time
+    broadcastToRoom(workspaceId, {
+      type: 'TASK_UPDATED',
+      payload: {
+        task,
+        boardId,
+        listId: task.listId,
+        oldListId: oldTask?.listId || null,
+      },
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -79,6 +100,16 @@ const deleteTask = async (req, res) => {
     }
 
     res.json({ message: "Task deleted successfully" });
+
+    // Broadcast to all workspace clients in real-time
+    broadcastToRoom(workspaceId, {
+      type: 'TASK_DELETED',
+      payload: {
+        taskId,
+        boardId,
+        listId: task.listId,
+      },
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

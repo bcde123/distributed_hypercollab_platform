@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react"
+import { useWs } from "@/context/WebSocketProvider"
 import { useParams, Link, useNavigate } from "react-router-dom"
 import { useDispatch, useSelector } from "react-redux"
 import { ArrowLeft, Plus, MoreHorizontal, Trash2, Edit2, ChevronLeft, ChevronRight, Settings } from "lucide-react"
@@ -15,6 +16,9 @@ export default function BoardPage() {
 
   const { currentWorkspace } = useSelector((state) => state.workspace)
   const { fullBoard, loading } = useSelector((state) => state.board)
+
+  // Subscribe to workspace room for live task updates
+  const { joinWorkspace, leaveWorkspace } = useWs()
 
   const [newListTitle, setNewListTitle] = useState("")
   const [addingTaskToList, setAddingTaskToList] = useState(null)
@@ -36,6 +40,14 @@ export default function BoardPage() {
       dispatch(getFullBoard({ workspaceId: currentWorkspace._id, boardId }))
     }
   }, [currentWorkspace?._id, boardId, dispatch])
+
+  // Join workspace WS room for live updates
+  useEffect(() => {
+    if (currentWorkspace?._id) {
+      joinWorkspace(currentWorkspace._id)
+      return () => leaveWorkspace(currentWorkspace._id)
+    }
+  }, [currentWorkspace?._id, joinWorkspace, leaveWorkspace])
 
   if (loading || !fullBoard) {
     return <div className="flex h-screen items-center justify-center bg-neutral-50">Loading board...</div>

@@ -8,6 +8,7 @@ import { CreateBoardModal } from "@/components/workspace/create-board-modal"
 import { useState, useEffect } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { useParams } from "react-router-dom"
+import { useWs } from "@/context/WebSocketProvider"
 
 import { getBoardsByWorkspace, createBoard } from "@/features/board/boardThunks"
 import { getWorkspaceBySlug } from "@/features/workspace/workspaceThunks"
@@ -42,6 +43,15 @@ export default function WorkspacePage() {
       dispatch(getBoardsByWorkspace(currentWorkspace._id))
     }
   }, [dispatch, currentWorkspace])
+
+  /* ================= JOIN WORKSPACE WS ROOM (live updates) ================= */
+  const { joinWorkspace, leaveWorkspace } = useWs()
+  useEffect(() => {
+    if (currentWorkspace?._id) {
+      joinWorkspace(currentWorkspace._id)
+      return () => leaveWorkspace(currentWorkspace._id)
+    }
+  }, [currentWorkspace?._id, joinWorkspace, leaveWorkspace])
 
   /* ================= CREATE BOARD ================= */
   const handleCreateBoard = async ({ title }) => {

@@ -127,6 +127,7 @@ function initWebSocketServer(server) {
   global.wss = wss;
   global.wsBroadcast = broadcast;
   global.wsConnections = connections;
+  global.wsRooms = rooms; // Used by wsBroadcast.js for workspace-level broadcasts
 
   console.log("🔌 WebSocket server attached (path: /ws)");
   return wss;
@@ -204,6 +205,34 @@ async function handleMessage(ws, msg) {
       ws._rooms?.delete(chatId);
 
       send(ws, "left_room", { chatId });
+      break;
+    }
+
+    /* ── Workspace Rooms (for live task updates) ───────────────────── */
+    case "join_workspace": {
+      const { workspaceId } = payload || {};
+      if (!workspaceId) return send(ws, "error", { message: "workspaceId required" });
+
+      const roomKey = `workspace:${workspaceId}`;
+      if (!rooms.has(roomKey)) rooms.set(roomKey, new Set());
+      rooms.get(roomKey).add(ws);
+
+      if (!ws._rooms) ws._rooms = new Set();
+      ws._rooms.add(roomKey);
+
+      send(ws, "joined_workspace", { workspaceId });
+      break;
+    }
+
+    case "leave_workspace": {
+      const { workspaceId } = payload || {};
+      if (!workspaceId) return;
+
+      const roomKey = `workspace:${workspaceId}`;
+      rooms.get(roomKey)?.delete(ws);
+      ws._rooms?.delete(roomKey);
+
+      send(ws, "left_workspace", { workspaceId });
       break;
     }
 
