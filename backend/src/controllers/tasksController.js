@@ -107,6 +107,7 @@ const updateTask = async (req, res) => {
         workspaceId,
         boardId,
         assignees: task.assignees,
+        createdAt: new Date(task.createdAt || oldTask?.createdAt || Date.now()).getTime(),
         completedAt: Date.now(),
       });
     }

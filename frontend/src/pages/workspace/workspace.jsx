@@ -5,6 +5,7 @@ import { Sidebar } from "@/components/workspace/sidebar"
 import { ChatPanel } from "@/components/workspace/chat-panel"
 import { MembersList } from "@/components/workspace/members-list"
 import { CreateBoardModal } from "@/components/workspace/create-board-modal"
+import { AnalyticsDashboard } from "@/components/workspace/AnalyticsDashboard"
 import { useState, useEffect } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { useParams } from "react-router-dom"
@@ -138,9 +139,7 @@ export default function WorkspacePage() {
         )}
         
         {activeTab === "analytics" && (
-          <div className="text-neutral-500 flex h-full items-center justify-center">
-            Analytics coming soon...
-          </div>
+          <AnalyticsDashboard currentWorkspace={currentWorkspace} />
         )}
       </main>
     </div>

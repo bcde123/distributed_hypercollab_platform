@@ -8,6 +8,7 @@ const cookieParser = require('cookie-parser');
 const boardRoutes = require('./src/routes/boards');
 const cors = require('cors');
 const chatRoutes = require('./src/routes/chat');
+const analyticsRoutes = require('./src/routes/analytics');
 const { initWebSocketServer } = require('./src/websocket/socketServer');
 
 const app = express();
@@ -45,6 +46,8 @@ app.use('/api/auth', router);
 app.use('/api', workspaceRoutes);
 // This structure ensures :workspaceId is available in req.params for the RBAC middleware
 app.use('/api/workspaces/:workspaceId/boards', boardRoutes);
+app.use('/api/workspaces/:workspaceId/analytics', analyticsRoutes);
+
 
 // chat
 app.use("/api/chat", chatRoutes);
