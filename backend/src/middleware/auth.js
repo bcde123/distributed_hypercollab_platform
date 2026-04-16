@@ -11,7 +11,8 @@ const verifyAccessToken = (req, res, next) => {
         const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
         // console.log("DECODED:", decoded);
         req.user = {
-            id: decoded.userId
+            id: decoded.userId,
+            userId: decoded.userId
         };
         next();
     } catch(err) {

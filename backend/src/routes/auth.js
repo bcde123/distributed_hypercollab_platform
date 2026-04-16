@@ -16,4 +16,7 @@ router.post('/refresh', authController.refreshToken);
 // Verify token route
 router.get("/verify", verifyAccessToken, authController.verifyToken);
 
+// Update Kyber public key
+router.put("/publickey", verifyAccessToken, authController.updatePublicKey);
+
 module.exports = router;

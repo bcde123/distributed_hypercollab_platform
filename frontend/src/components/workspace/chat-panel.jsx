@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react"
+import { useDispatch, useSelector } from "react-redux"
 import {
   Send,
   Smile,
@@ -13,21 +14,24 @@ import {
   Wifi,
   WifiOff,
   X,
+  Lock,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
-import { useDispatch, useSelector } from "react-redux"
 import { useWs } from "@/context/WebSocketProvider"
 import {
   fetchMyChats,
   createChat,
   fetchMessages,
+  sendMessage,
+  deriveSharedSecret,
 } from "@/features/chat/chatThunks"
 import {
   setActiveChat,
   clearActiveChat,
 } from "@/features/chat/chatSlice"
+import { hasSharedSecret } from "@/crypto/keyStore"
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -66,7 +70,7 @@ function getChatDisplayName(chat, currentUserId) {
     const id = typeof m === "object" ? m._id : m
     return id !== currentUserId
   })
-  if (typeof other === "object") return other.username || "Unknown"
+  if (typeof other === "object") return other.username || other.email || "Unknown"
   return "Direct Message"
 }
 
@@ -169,20 +173,20 @@ function ConversationList({ conversations, activeConvoId, onSelect, type, curren
             {/* Info */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <span
-                  className={cn(
-                    "text-sm font-medium truncate",
-                    "text-neutral-700"
-                  )}
-                >
+                <span className="text-sm font-medium truncate text-neutral-700">
                   {displayName}
                 </span>
-                <span className="text-[10px] text-neutral-400 ml-2 flex-shrink-0">
-                  {timestamp}
-                </span>
+                <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                  {convo.isEncrypted && (
+                    <Lock className="h-3 w-3 text-emerald-500" />
+                  )}
+                  <span className="text-[10px] text-neutral-400">
+                    {timestamp}
+                  </span>
+                </div>
               </div>
               <p className="text-xs text-neutral-500 truncate mt-0.5">
-                {lastMsg}
+                {convo.isEncrypted ? "🔒 Encrypted" : lastMsg}
               </p>
             </div>
           </button>
@@ -193,16 +197,13 @@ function ConversationList({ conversations, activeConvoId, onSelect, type, curren
 }
 
 function MessageBubble({ msg, prevMsg, currentUserId }) {
-  const isCurrentUser =
-    (typeof msg.sender === "object" ? msg.sender._id : msg.sender) ===
-    currentUserId
-  const senderName =
-    typeof msg.sender === "object" ? msg.sender.username : "You"
-  const avatar = getInitials(senderName)
-  const showAvatar =
-    !prevMsg ||
-    (typeof prevMsg.sender === "object" ? prevMsg.sender._id : prevMsg.sender) !==
-      (typeof msg.sender === "object" ? msg.sender._id : msg.sender)
+  const senderId = typeof msg.sender === "object" ? msg.sender._id : msg.sender
+  const isCurrentUser = senderId === currentUserId
+  const senderName = typeof msg.sender === "object" ? (msg.sender.username || "Unknown") : "Unknown"
+  const initials = getInitials(senderName)
+
+  const prevSenderId = prevMsg ? (typeof prevMsg.sender === "object" ? prevMsg.sender._id : prevMsg.sender) : null
+  const showAvatar = !prevMsg || prevSenderId !== senderId
 
   return (
     <div className={cn("flex gap-3", isCurrentUser && "flex-row-reverse")}>
@@ -213,7 +214,7 @@ function MessageBubble({ msg, prevMsg, currentUserId }) {
             isCurrentUser ? "bg-indigo-600" : "bg-neutral-400"
           )}
         >
-          {avatar}
+          {initials}
         </div>
       ) : (
         <div className="w-8 flex-shrink-0" />
@@ -221,12 +222,7 @@ function MessageBubble({ msg, prevMsg, currentUserId }) {
 
       <div className={cn("max-w-[65%]", isCurrentUser && "text-right")}>
         {showAvatar && (
-          <div
-            className={cn(
-              "flex items-center gap-2 mb-1",
-              isCurrentUser && "justify-end"
-            )}
-          >
+          <div className={cn("flex items-center gap-2 mb-1", isCurrentUser && "flex-row-reverse")}>
             <span className="text-xs font-semibold text-neutral-700">
               {isCurrentUser ? "You" : senderName}
             </span>
@@ -237,7 +233,7 @@ function MessageBubble({ msg, prevMsg, currentUserId }) {
         )}
         <div
           className={cn(
-            "rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
+            "rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words",
             isCurrentUser
               ? "bg-indigo-600 text-white rounded-br-sm"
               : "bg-neutral-100 text-neutral-800 rounded-bl-sm"
@@ -271,7 +267,7 @@ function TypingIndicator({ typingUsers, currentUserId }) {
 
 // ── New Chat Modal ───────────────────────────────────────────────────────
 
-function NewChatModal({ isOpen, onClose, chatMode, workspaceMembers, onSubmit }) {
+function NewChatModal({ isOpen, onClose, chatMode, workspaceMembers, onSubmit, currentUserId }) {
   const [selectedMembers, setSelectedMembers] = useState([])
   const [channelName, setChannelName] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
@@ -279,12 +275,11 @@ function NewChatModal({ isOpen, onClose, chatMode, workspaceMembers, onSubmit })
   if (!isOpen) return null
 
   const filteredMembers = workspaceMembers.filter((m) =>
-    m.username?.toLowerCase().includes(searchQuery.toLowerCase())
+    (m.username || "").toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   const handleToggleMember = (memberId) => {
     if (chatMode === "dm") {
-      // DMs: only one member
       setSelectedMembers([memberId])
     } else {
       setSelectedMembers((prev) =>
@@ -310,13 +305,18 @@ function NewChatModal({ isOpen, onClose, chatMode, workspaceMembers, onSubmit })
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-xl shadow-2xl w-[420px] max-h-[80vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-xl shadow-2xl w-[420px] max-h-[80vh] flex flex-col mx-4">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
-          <h3 className="text-lg font-semibold text-neutral-900">
-            {chatMode === "dm" ? "New Direct Message" : "New Channel"}
-          </h3>
+          <div>
+            <h3 className="text-lg font-semibold text-neutral-900">
+              {chatMode === "dm" ? "New Direct Message" : "New Channel"}
+            </h3>
+            {chatMode === "dm" && (
+              <p className="text-[10px] text-emerald-600 font-medium">Messages will be end-to-end encrypted 🔒</p>
+            )}
+          </div>
           <button
             onClick={onClose}
             className="text-neutral-400 hover:text-neutral-600 transition-colors"
@@ -428,13 +428,14 @@ function NewChatModal({ isOpen, onClose, chatMode, workspaceMembers, onSubmit })
             }
             className="bg-indigo-600 hover:bg-indigo-700 text-sm"
           >
-            {chatMode === "dm" ? "Start Chat" : "Create Channel"}
+            {chatMode === "dm" ? "Start Encrypted Chat 🔒" : "Create Channel"}
           </Button>
         </div>
       </div>
     </div>
   )
 }
+
 
 // ── Main ChatPanel ───────────────────────────────────────────────────────
 
@@ -444,9 +445,7 @@ export function ChatPanel() {
 
   // Redux state
   const currentUser = useSelector((state) => state.auth.user)
-  const currentWorkspace = useSelector(
-    (state) => state.workspace.currentWorkspace
-  )
+  const currentWorkspace = useSelector((state) => state.workspace.currentWorkspace)
   const {
     chats,
     chatsLoading,
@@ -455,6 +454,7 @@ export function ChatPanel() {
     messagesLoading,
     onlineUsers,
     typingUsers,
+    sendingMessage,
   } = useSelector((state) => state.chat)
 
   const currentUserId = currentUser?._id || currentUser?.userId
@@ -464,6 +464,7 @@ export function ChatPanel() {
   const [message, setMessage] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [showNewChatModal, setShowNewChatModal] = useState(false)
+  const [keyDeriving, setKeyDeriving] = useState(false)
   const bottomRef = useRef(null)
   const typingTimeoutRef = useRef(null)
   const prevChatIdRef = useRef(null)
@@ -498,40 +499,47 @@ export function ChatPanel() {
     if (!currentWorkspace?.members) return []
     return currentWorkspace.members
       .map((m) => (typeof m.user === "object" ? m.user : { _id: m.user }))
-      .filter((m) => m._id !== currentUserId)
+      .filter((m) => (m._id || m.userId) !== currentUserId)
   }, [currentWorkspace, currentUserId])
 
   // ── Effects ────────────────────────────────────────────────────────────
 
-  // Fetch chats on mount / workspace change
+  // Fetch chats on workspace change
   useEffect(() => {
-    dispatch(
-      fetchMyChats({
-        workspaceId: currentWorkspace?._id,
-      })
-    )
-  }, [dispatch, currentWorkspace])
+    if (currentWorkspace?._id) {
+      dispatch(fetchMyChats({ workspaceId: currentWorkspace._id }))
+    }
+  }, [dispatch, currentWorkspace?._id])
 
-  // When active chat changes: fetch messages + join/leave rooms
+  // When active chat changes: derivation + fetch messages + join/leave rooms
   useEffect(() => {
     if (activeChat?._id) {
-      dispatch(fetchMessages({ chatId: activeChat._id }))
+       const loadChat = async () => {
+          // For encrypted DMs: derive shared secret if not cached
+          if (activeChat.isEncrypted && !hasSharedSecret(activeChat._id)) {
+            setKeyDeriving(true)
+            await deriveSharedSecret(activeChat, currentUserId)
+            setKeyDeriving(false)
+          }
 
-      // Leave previous room
-      if (prevChatIdRef.current && prevChatIdRef.current !== activeChat._id) {
-        ws.leaveRoom(prevChatIdRef.current)
-      }
-      // Join new room
-      ws.joinRoom(activeChat._id)
-      prevChatIdRef.current = activeChat._id
+          // Fetch messages
+          dispatch(fetchMessages({
+            chatId: activeChat._id,
+            isEncrypted: activeChat.isEncrypted || false,
+          }))
+
+          // WebSocket: Leave previous room, Join new room
+          if (prevChatIdRef.current && prevChatIdRef.current !== activeChat._id) {
+            ws.leaveRoom(prevChatIdRef.current)
+          }
+          ws.joinRoom(activeChat._id)
+          prevChatIdRef.current = activeChat._id
+       }
+       loadChat()
     }
+  }, [activeChat?._id, dispatch, ws, currentUserId])
 
-    return () => {
-      // Don't leave on unmount — we might re-mount
-    }
-  }, [activeChat?._id, dispatch, ws])
-
-  // Auto-scroll on new messages
+  // Auto-scroll
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [currentMessages.length])
@@ -546,27 +554,28 @@ export function ChatPanel() {
   )
 
   const handleSendMessage = useCallback(() => {
-    if (!message.trim() || !activeChat) return
+    if (!message.trim() || !activeChat || sendingMessage) return
 
-    // Send via WebSocket for real-time delivery
-    ws.sendChatMessage(activeChat._id, message.trim())
+    // Use Redux thunk for database persistence (handles encryption internally)
+    dispatch(sendMessage({
+      chatId: activeChat._id,
+      content: message.trim(),
+      isEncrypted: activeChat.isEncrypted || false,
+    }))
 
     // Stop typing indicator
     ws.stopTyping(activeChat._id)
     clearTimeout(typingTimeoutRef.current)
-
     setMessage("")
-  }, [message, activeChat, ws])
+  }, [message, activeChat, sendingMessage, ws, dispatch])
 
   const handleInputChange = useCallback(
     (e) => {
       setMessage(e.target.value)
-
       if (!activeChat) return
 
       // Send typing indicator (debounced)
       ws.sendTyping(activeChat._id)
-
       clearTimeout(typingTimeoutRef.current)
       typingTimeoutRef.current = setTimeout(() => {
         ws.stopTyping(activeChat._id)
@@ -586,7 +595,7 @@ export function ChatPanel() {
         })
       )
     },
-    [dispatch, currentWorkspace]
+    [dispatch, currentWorkspace?._id]
   )
 
   const handleSwitchMode = useCallback(
@@ -597,14 +606,10 @@ export function ChatPanel() {
     [dispatch]
   )
 
-  // ── Render ─────────────────────────────────────────────────────────────
+  // ── Render Helpers ──────────────────────────────────────────────────────
 
-  const displayName = activeChat
-    ? getChatDisplayName(activeChat, currentUserId)
-    : ""
-  const displayAvatar = activeChat
-    ? getChatAvatar(activeChat, currentUserId)
-    : ""
+  const activeDisplayName = activeChat ? getChatDisplayName(activeChat, currentUserId) : ""
+  const activeAvatar = activeChat ? getChatAvatar(activeChat, currentUserId) : ""
 
   // Online status for active DM
   let activeChatOnline = false
@@ -618,27 +623,24 @@ export function ChatPanel() {
   }
 
   return (
-    <div className="flex h-full bg-neutral-50">
+    <div className="flex h-full bg-neutral-50 overflow-hidden">
       {/* ── LEFT: Conversation List ── */}
       <div className="w-80 border-r border-neutral-200 bg-white flex flex-col flex-shrink-0">
-        {/* Header */}
         <div className="p-4 border-b border-neutral-100">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-neutral-900">Messages</h2>
-            {/* Connection indicator */}
             <div className="flex items-center gap-1.5">
-              {ws.isConnected?.current ? (
-                <Wifi className="h-3.5 w-3.5 text-emerald-500" />
-              ) : (
-                <WifiOff className="h-3.5 w-3.5 text-red-400" />
-              )}
-              <span className="text-[10px] text-neutral-400">
-                {ws.isConnected?.current ? "Live" : "Offline"}
-              </span>
+               {ws.isConnected?.current ? (
+                 <Wifi className="h-3.5 w-3.5 text-emerald-500" />
+               ) : (
+                 <WifiOff className="h-3.5 w-3.5 text-red-400" />
+               )}
+               <span className="text-[10px] text-neutral-400">
+                 {ws.isConnected?.current ? "Live" : "Offline"}
+               </span>
             </div>
           </div>
 
-          {/* DM / Group Tabs */}
           <div className="flex bg-neutral-100 rounded-lg p-1 mb-3">
             <button
               onClick={() => handleSwitchMode("dm")}
@@ -666,7 +668,6 @@ export function ChatPanel() {
             </button>
           </div>
 
-          {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
             <Input
@@ -678,7 +679,6 @@ export function ChatPanel() {
           </div>
         </div>
 
-        {/* Conversation List */}
         <div className="flex-1 overflow-y-auto p-2">
           {chatsLoading ? (
             <div className="flex items-center justify-center py-12">
@@ -696,7 +696,6 @@ export function ChatPanel() {
           )}
         </div>
 
-        {/* New Conversation Button */}
         <div className="p-3 border-t border-neutral-100">
           <Button
             variant="outline"
@@ -710,162 +709,117 @@ export function ChatPanel() {
       </div>
 
       {/* ── RIGHT: Message Area ── */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 bg-white">
         {!activeChat ? (
-          // Empty state
           <div className="flex-1 flex flex-col items-center justify-center text-neutral-400 gap-3">
-            <div className="h-16 w-16 rounded-full bg-neutral-100 flex items-center justify-center">
-              {chatMode === "dm" ? (
-                <User className="h-8 w-8" />
-              ) : (
-                <Hash className="h-8 w-8" />
-              )}
-            </div>
-            <p className="text-lg font-medium text-neutral-500">
-              {chatMode === "dm"
-                ? "Select a conversation"
-                : "Select a channel"}
-            </p>
-            <p className="text-sm text-neutral-400">
-              Choose from the left panel to start chatting
-            </p>
+             <div className="h-16 w-16 rounded-full bg-neutral-50 flex items-center justify-center">
+                {chatMode === "dm" ? <User className="h-8 w-8" /> : <Hash className="h-8 w-8" />}
+             </div>
+             <p className="text-lg font-medium text-neutral-500">
+               Select a {chatMode === "dm" ? "conversation" : "channel"}
+             </p>
+             <p className="text-sm text-neutral-400">Choose from the left to start chatting</p>
           </div>
         ) : (
           <>
-            {/* Chat Header */}
+            {/* Header */}
             <div className="flex items-center justify-between px-6 py-3 border-b border-neutral-200 bg-white">
               <div className="flex items-center gap-3">
-                {activeChat.type === "dm" ? (
-                  <div className="relative">
-                    <div className="h-9 w-9 rounded-full bg-indigo-600 flex items-center justify-center text-xs font-semibold text-white">
-                      {displayAvatar}
+                 <div className="relative">
+                    <div className={cn(
+                      "h-9 w-9 flex items-center justify-center text-xs font-semibold text-white",
+                      activeChat.type === "dm" ? "rounded-full bg-indigo-600" : "rounded-lg bg-indigo-100 text-indigo-600"
+                    )}>
+                       {activeChat.type === "dm" ? activeAvatar : "#"}
                     </div>
-                    {activeChatOnline && (
+                    {activeChat.type === "dm" && activeChatOnline && (
                       <div className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white" />
                     )}
-                  </div>
-                ) : (
-                  <div className="h-9 w-9 rounded-lg bg-indigo-100 flex items-center justify-center text-lg font-bold text-indigo-600">
-                    #
-                  </div>
-                )}
-                <div>
-                  <h3 className="font-semibold text-neutral-900 text-sm">
-                    {displayName}
-                  </h3>
-                  <p className="text-xs text-neutral-500">
-                    {activeChat.type === "dm"
-                      ? activeChatOnline
-                        ? "Online"
-                        : "Offline"
-                      : `${activeChat.members?.length || 0} members`}
-                  </p>
-                </div>
+                 </div>
+                 <div>
+                    <h3 className="font-semibold text-neutral-900 text-sm flex items-center gap-1.5">
+                       {activeDisplayName}
+                       {activeChat.isEncrypted && (
+                         <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-100">
+                           <Lock className="h-2.5 w-2.5" />
+                           E2E
+                         </span>
+                       )}
+                    </h3>
+                    <p className="text-xs text-neutral-500">
+                       {activeChat.type === "dm" ? (activeChatOnline ? "Online" : "Offline") : `${activeChat.members?.length || 0} members`}
+                       {activeChat.isEncrypted && " · Kyber768 Secured"}
+                    </p>
+                 </div>
               </div>
               <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-neutral-500"
-                >
-                  <Search className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-neutral-500"
-                >
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
+                 <Button variant="ghost" size="icon" className="h-8 w-8 text-neutral-500"><Search className="h-4 w-4" /></Button>
+                 <Button variant="ghost" size="icon" className="h-8 w-8 text-neutral-500"><MoreVertical className="h-4 w-4" /></Button>
               </div>
             </div>
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-              {messagesLoading ? (
+              {keyDeriving ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-3">
+                   <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+                   <p className="text-sm text-neutral-500 font-medium">Deriving PQC shared secret...</p>
+                </div>
+              ) : messagesLoading ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
+                   <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
                 </div>
               ) : currentMessages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-neutral-400">
-                  <p className="text-sm">No messages yet. Say hello! 👋</p>
+                <div className="text-center py-12 text-neutral-400">
+                   <p className="text-sm">{activeChat.isEncrypted ? "🔒 This chat is E2E encrypted. Start the conversation!" : "No messages yet. Say hello! 👋"}</p>
                 </div>
               ) : (
                 <>
-                  <div className="text-center">
+                  <div className="text-center mb-6">
                     <span className="inline-block text-[10px] text-neutral-400 bg-neutral-100 rounded-full px-3 py-1">
-                      Start of conversation
+                       {activeChat.isEncrypted ? "🔒 Messages are secured with Kyber-768/AES-GCM" : "Beginning of conversation"}
                     </span>
                   </div>
-
                   {currentMessages.map((msg, idx) => (
-                    <MessageBubble
-                      key={msg._id}
-                      msg={msg}
-                      prevMsg={currentMessages[idx - 1]}
-                      currentUserId={currentUserId}
-                    />
+                    <MessageBubble key={msg._id} msg={msg} prevMsg={currentMessages[idx - 1]} currentUserId={currentUserId} />
                   ))}
                 </>
               )}
-
-              {/* Typing indicator */}
-              <TypingIndicator
-                typingUsers={currentTypingUsers}
-                currentUserId={currentUserId}
-              />
-
+              <TypingIndicator typingUsers={currentTypingUsers} currentUserId={currentUserId} />
               <div ref={bottomRef} />
             </div>
 
             {/* Input */}
-            <div className="border-t border-neutral-200 bg-white px-6 py-3">
-              <div className="flex items-end gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 text-neutral-500 hover:text-neutral-700 flex-shrink-0"
-                >
-                  <Paperclip className="h-5 w-5" />
-                </Button>
-
-                <div className="flex-1 relative">
-                  <Input
-                    value={message}
-                    onChange={handleInputChange}
-                    onKeyDown={(e) =>
-                      e.key === "Enter" &&
-                      !e.shiftKey &&
-                      (e.preventDefault(), handleSendMessage())
-                    }
-                    placeholder={`Message ${displayName}...`}
-                    className="pr-10 h-10 text-sm"
-                  />
-                  <button className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600">
-                    <Smile className="h-5 w-5" />
-                  </button>
-                </div>
-
-                <Button
-                  onClick={handleSendMessage}
-                  disabled={!message.trim()}
-                  className="bg-indigo-600 hover:bg-indigo-700 h-10 w-10 p-0 flex-shrink-0"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
+            <div className="border-t border-neutral-200 bg-white px-6 py-4">
+               <div className="flex items-end gap-2">
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-neutral-400 hover:text-indigo-600 transition-colors"><Paperclip className="h-5 w-5" /></Button>
+                  <div className="flex-1 relative">
+                     <Input
+                        value={message}
+                        onChange={handleInputChange}
+                        onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSendMessage())}
+                        placeholder={activeChat.isEncrypted ? `🔒 Encrypted message to ${activeDisplayName}...` : `Message ${activeDisplayName}...`}
+                        className="pr-10 h-10 text-sm border-neutral-200 focus:border-indigo-500 transition-all shadow-sm"
+                        disabled={sendingMessage || keyDeriving}
+                     />
+                     <button className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-indigo-600"><Smile className="h-5 w-5" /></button>
+                  </div>
+                  <Button onClick={handleSendMessage} disabled={!message.trim() || sendingMessage || keyDeriving} className="bg-indigo-600 hover:bg-indigo-700 h-10 w-10 p-0 shadow-lg shadow-indigo-200">
+                     {sendingMessage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  </Button>
+               </div>
             </div>
           </>
         )}
       </div>
 
-      {/* ── New Chat Modal ── */}
       <NewChatModal
         isOpen={showNewChatModal}
         onClose={() => setShowNewChatModal(false)}
-        chatMode={chatMode === "dm" ? "dm" : "channel"}
+        chatMode={chatMode}
         workspaceMembers={workspaceMembers}
         onSubmit={handleCreateChat}
+        currentUserId={currentUserId}
       />
     </div>
   )

@@ -140,21 +140,51 @@ const refreshToken = async (req, res) => {
 };
 
 // Verify token controller
-const verifyToken = (req, res) => {
-    // If we reach here, token is valid
-    res.status(200).json({
-        authenticated: true,
-        user: {
-            userId: req.user.userId,
-            email: req.user.email,
-            username: req.user.username,
-        },
-    });
+const verifyToken = async (req, res) => {
+    try {
+        // Fetch user from DB to get publicKey
+        const dbUser = await User.findById(req.user.userId).select('publicKey');
+        res.status(200).json({
+            authenticated: true,
+            user: {
+                userId: req.user.userId,
+                email: req.user.email,
+                username: req.user.username,
+                publicKey: dbUser?.publicKey || null,
+            },
+        });
+    } catch (err) {
+        res.status(200).json({
+            authenticated: true,
+            user: {
+                userId: req.user.userId,
+                email: req.user.email,
+                username: req.user.username,
+                publicKey: null,
+            },
+        });
+    }
+};
+
+// Update public key (Kyber768 KEM)
+const updatePublicKey = async (req, res) => {
+    try {
+        const { publicKey } = req.body;
+        if (!publicKey) {
+            return res.status(400).json({ message: 'publicKey is required' });
+        }
+        await User.findByIdAndUpdate(req.user.userId, { publicKey });
+        res.status(200).json({ message: 'Public key updated' });
+    } catch (err) {
+        console.error('Update public key error:', err);
+        res.status(500).json({ message: 'Server error' });
+    }
 };
 
 module.exports = {
     login,
     register,
     refreshToken,
-    verifyToken
+    verifyToken,
+    updatePublicKey
 };

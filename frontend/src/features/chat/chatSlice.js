@@ -1,9 +1,10 @@
 import { createSlice } from "@reduxjs/toolkit";
 import {
   fetchMyChats,
+  fetchWorkspaceChats,
   createChat,
   fetchMessages,
-  sendMessageREST,
+  sendMessage,
   fetchOnlineUsers,
 } from "./chatThunks";
 
@@ -26,6 +27,9 @@ const initialState = {
 
   // Typing indicators: { [chatId]: [{ userId, username }] }
   typingUsers: {},
+
+  // Sending status
+  sendingMessage: false,
 };
 
 const chatSlice = createSlice({
@@ -71,6 +75,22 @@ const chatSlice = createSlice({
       }
     },
 
+    // Bridge for E2E decrypted messages from WebSocket logic
+    addIncomingMessage(state, action) {
+      const message = action.payload;
+      const chatId = message.chatId;
+      if (!chatId) return;
+
+      if (!state.messagesByChat[chatId]) {
+        state.messagesByChat[chatId] = [];
+      }
+
+      const exists = state.messagesByChat[chatId].some((m) => m._id === message._id);
+      if (!exists) {
+        state.messagesByChat[chatId].push(message);
+      }
+    },
+
     // WebSocket: update online users
     setOnlineUsers(state, action) {
       state.onlineUsers = action.payload;
@@ -99,10 +119,17 @@ const chatSlice = createSlice({
         );
       }
     },
+
+    clearChat(state) {
+      state.chats = [];
+      state.activeChat = null;
+      state.messagesByChat = {};
+      state.chatsError = null;
+    },
   },
   extraReducers: (builder) => {
     builder
-      /* ================= FETCH MY CHATS ================= */
+      /* ================= FETCH CHATS (MY / WORKSPACE) ================= */
       .addCase(fetchMyChats.pending, (state) => {
         state.chatsLoading = true;
         state.chatsError = null;
@@ -115,6 +142,18 @@ const chatSlice = createSlice({
         state.chatsLoading = false;
         state.chatsError = action.payload;
       })
+      .addCase(fetchWorkspaceChats.pending, (state) => {
+        state.chatsLoading = true;
+        state.chatsError = null;
+      })
+      .addCase(fetchWorkspaceChats.fulfilled, (state, action) => {
+        state.chatsLoading = false;
+        state.chats = action.payload;
+      })
+      .addCase(fetchWorkspaceChats.rejected, (state, action) => {
+        state.chatsLoading = false;
+        state.chatsError = action.payload;
+      })
 
       /* ================= CREATE CHAT ================= */
       .addCase(createChat.pending, (state) => {
@@ -123,7 +162,6 @@ const chatSlice = createSlice({
       })
       .addCase(createChat.fulfilled, (state, action) => {
         state.chatsLoading = false;
-        // Add to list if not already there
         const exists = state.chats.some((c) => c._id === action.payload._id);
         if (!exists) {
           state.chats.unshift(action.payload);
@@ -150,8 +188,12 @@ const chatSlice = createSlice({
         state.messagesError = action.payload;
       })
 
-      /* ================= SEND MESSAGE (REST) ================= */
-      .addCase(sendMessageREST.fulfilled, (state, action) => {
+      /* ================= SEND MESSAGE ================= */
+      .addCase(sendMessage.pending, (state) => {
+        state.sendingMessage = true;
+      })
+      .addCase(sendMessage.fulfilled, (state, action) => {
+        state.sendingMessage = false;
         const msg = action.payload;
         const chatId = msg.chatId;
         if (!state.messagesByChat[chatId]) {
@@ -163,6 +205,19 @@ const chatSlice = createSlice({
         if (!exists) {
           state.messagesByChat[chatId].push(msg);
         }
+
+        // Update lastMessage on chat
+        const chatIdx = state.chats.findIndex((c) => c._id === chatId);
+        if (chatIdx !== -1) {
+          state.chats[chatIdx].lastMessage = msg;
+          state.chats[chatIdx].updatedAt = msg.createdAt;
+          const [chat] = state.chats.splice(chatIdx, 1);
+          state.chats.unshift(chat);
+        }
+      })
+      .addCase(sendMessage.rejected, (state, action) => {
+        state.sendingMessage = false;
+        state.messagesError = action.payload;
       })
 
       /* ================= FETCH ONLINE USERS ================= */
@@ -176,9 +231,11 @@ export const {
   setActiveChat,
   clearActiveChat,
   receiveMessage,
+  addIncomingMessage,
   setOnlineUsers,
   addTypingUser,
   removeTypingUser,
+  clearChat,
 } = chatSlice.actions;
 
 export default chatSlice.reducer;

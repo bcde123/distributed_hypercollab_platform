@@ -2,179 +2,118 @@ const Message = require("../models/Message");
 const Chat = require("../models/Chat");
 const User = require("../models/User");
 
-// ── POST /api/chat/send ──────────────────────────────────────────────────
-const sendMessage = async (req, res) => {
-  try {
-    const { chatId, content } = req.body;
-    if (!chatId || !content) {
-      return res.status(400).json({ message: "Missing fields" });
-    }
-
-    const chat = await Chat.findById(chatId);
-    if (!chat) {
-      return res.status(404).json({ message: "Chat not found" });
-    }
-
-    // Verify membership
-    const isMember = chat.members.some(
-      (m) => m.toString() === req.user.id
-    );
-    if (!isMember) {
-      return res.status(403).json({ message: "Not a member of this chat" });
-    }
-
-    const message = await Message.create({
-      chatId,
-      sender: req.user.id,
-      content,
-    });
-
-    // Update lastMessage pointer on Chat
-    chat.lastMessage = message._id;
-    await chat.save();
-
-    // Populate sender for response
-    const populated = await Message.findById(message._id)
-      .populate("sender", "username")
-      .lean();
-
-    // Broadcast via WebSocket (if available)
-    if (global.wsBroadcast) {
-      // Broadcast to room including sender (they'll deduplicate)
-      const { wsBroadcast } = global;
-      // We need to import rooms directly from socketServer — use global workaround
-      // Actually, broadcast already handles this through rooms map
-    }
-
-    return res.status(201).json(populated);
-  } catch (error) {
-    console.error("Send Message Error:", error);
-    res.status(500).json({ message: "Server error" });
-  }
-};
-
-// ── GET /api/chat/:chatId/messages ───────────────────────────────────────
-const getMessages = async (req, res) => {
-  try {
-    const { chatId } = req.params;
-
-    const chat = await Chat.findById(chatId).lean();
-    if (!chat) {
-      return res.status(404).json({ message: "Chat not found" });
-    }
-
-    // Verify membership
-    const isMember = chat.members.some(
-      (m) => m.toString() === req.user.id
-    );
-    if (!isMember) {
-      return res.status(403).json({ message: "Not a member of this chat" });
-    }
-
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 50;
-    const skip = (page - 1) * limit;
-
-    const messages = await Message.find({ chatId })
-      .sort({ createdAt: 1 })
-      .skip(skip)
-      .limit(limit)
-      .populate("sender", "username")
-      .lean();
-
-    const total = await Message.countDocuments({ chatId });
-
-    return res.status(200).json({
-      messages,
-      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
-    });
-  } catch (error) {
-    console.error("Get Messages Error:", error);
-    res.status(500).json({ message: "Server error" });
-  }
-};
-
-// ── POST /api/chat/create ────────────────────────────────────────────────
+// ── Create or get existing chat ──────────────────────────────────────────
 const createChat = async (req, res) => {
   try {
-    const { type, name, members, workspaceId } = req.body;
+    const { type, workspaceId, members, name, kemCipherText } = req.body;
+    const userId = req.user.userId || req.user.id;
 
     if (!type || !members || !Array.isArray(members)) {
-      return res.status(400).json({ message: "type and members[] are required" });
+      return res.status(400).json({ message: "Missing or invalid fields" });
     }
 
-    // For DMs, ensure members list includes exactly 2 users
+    // For DMs, find existing chat between these two users
     if (type === "dm") {
-      // Make sure current user is in the list
-      const memberSet = new Set([req.user.id, ...members]);
-      if (memberSet.size !== 2) {
-        return res.status(400).json({ message: "DM requires exactly 2 members" });
+      const dmMembers = [...new Set([userId, ...members])];
+      if (dmMembers.length !== 2) {
+        return res.status(400).json({ message: "DM must have exactly 2 members" });
       }
 
-      // Check if DM already exists between these users
-      const memberArr = [...memberSet];
       const existingDM = await Chat.findOne({
         type: "dm",
-        members: { $all: memberArr, $size: 2 },
-      });
+        members: { $all: dmMembers, $size: 2 },
+      }).populate("members", "username email publicKey lastMessage");
 
       if (existingDM) {
-        // Populate members for response
-        const populated = await Chat.findById(existingDM._id)
-          .populate("members", "username email")
-          .populate("lastMessage")
-          .lean();
-        return res.status(200).json(populated);
+        return res.status(200).json(existingDM);
       }
 
-      const chat = await Chat.create({
+      // Create new DM with E2E encryption data
+      const newDM = await Chat.create({
         type: "dm",
-        members: memberArr,
         workspaceId: workspaceId || null,
+        members: dmMembers,
+        isEncrypted: !!kemCipherText,
+        kemCipherText: kemCipherText || null,
+        initiator: userId,
       });
 
-      const populated = await Chat.findById(chat._id)
-        .populate("members", "username email")
-        .lean();
-
+      const populated = await Chat.findById(newDM._id).populate("members", "username email publicKey");
       return res.status(201).json(populated);
     }
 
-    // Channel
-    if (!name?.trim()) {
-      return res.status(400).json({ message: "Channel name is required" });
+    // For channels
+    if (type === "channel") {
+      const channelMembers = [...new Set([userId, ...members])];
+      const newChannel = await Chat.create({
+        type: "channel",
+        workspaceId: workspaceId || null,
+        name: name || "New Channel",
+        members: channelMembers,
+        isEncrypted: false,
+      });
+
+      const populated = await Chat.findById(newChannel._id).populate("members", "username email");
+      return res.status(201).json(populated);
     }
 
-    const memberSet = new Set([req.user.id, ...members]);
-    const chat = await Chat.create({
-      type: "channel",
-      name: name.trim(),
-      members: [...memberSet],
-      workspaceId: workspaceId || null,
-    });
-
-    const populated = await Chat.findById(chat._id)
-      .populate("members", "username email")
-      .lean();
-
-    return res.status(201).json(populated);
+    return res.status(400).json({ message: "Invalid chat type" });
   } catch (error) {
     console.error("Create Chat Error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
 
-// ── GET /api/chat/my-chats ───────────────────────────────────────────────
+// ── Get a user's public key (for KEM key exchange) ───────────────────────
+const getUserPublicKey = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId).select("publicKey username");
+    if (!user || !user.publicKey) {
+      return res.status(404).json({ message: "Public key not found for this user" });
+    }
+    return res.status(200).json({ userId: user._id, username: user.username, publicKey: user.publicKey });
+  } catch (error) {
+    console.error("Get Public Key Error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ── Get all chats for a workspace ────────────────────────────────────────
+const getWorkspaceChats = async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    const userId = req.user.userId || req.user.id;
+
+    const chats = await Chat.find({
+      workspaceId,
+      members: userId,
+    })
+      .populate("members", "username email publicKey")
+      .populate({
+        path: "lastMessage",
+        populate: { path: "sender", select: "username" },
+      })
+      .sort({ updatedAt: -1 });
+
+    return res.status(200).json(chats);
+  } catch (error) {
+    console.error("Get Workspace Chats Error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ── Get all chats for the authenticated user ─────────────────────────────
 const getMyChats = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.userId || req.user.id;
     const { workspaceId } = req.query;
 
     const filter = { members: userId };
     if (workspaceId) filter.workspaceId = workspaceId;
 
     const chats = await Chat.find(filter)
-      .populate("members", "username email")
+      .populate("members", "username email publicKey")
       .populate({
         path: "lastMessage",
         populate: { path: "sender", select: "username" },
@@ -189,7 +128,104 @@ const getMyChats = async (req, res) => {
   }
 };
 
-// ── GET /api/chat/online ─────────────────────────────────────────────────
+// ── Send a message ───────────────────────────────────────────────────────
+const sendMessage = async (req, res) => {
+  try {
+    const { chatId, content, nonce } = req.body;
+    const userId = req.user.userId || req.user.id;
+
+    if (!chatId || !content) {
+      return res.status(400).json({ message: "Missing fields" });
+    }
+
+    const chat = await Chat.findById(chatId);
+    if (!chat) {
+      return res.status(404).json({ message: "Chat not found" });
+    }
+
+    // Verify membership
+    const isMember = chat.members.some(
+      (m) => m.toString() === userId.toString()
+    );
+    if (!isMember) {
+      return res.status(403).json({ message: "Not a member of this chat" });
+    }
+
+    const message = await Message.create({
+      chatId,
+      sender: userId,
+      content,
+      nonce: nonce || null,
+    });
+
+    // Update lastMessage pointer on Chat
+    chat.lastMessage = message._id;
+    chat.updatedAt = new Date();
+    await chat.save();
+
+    // Populate sender for response
+    const populated = await Message.findById(message._id)
+      .populate("sender", "username email")
+      .lean();
+
+    // Broadcast via WebSocket
+    if (global.wsBroadcast) {
+      global.wsBroadcast(chatId, {
+        type: "new_message",
+        payload: populated,
+      });
+    }
+
+    return res.status(201).json(populated);
+  } catch (error) {
+    console.error("Send Message Error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ── Get messages for a chat ──────────────────────────────────────────────
+const getMessages = async (req, res) => {
+  try {
+    const { chatId } = req.params;
+    const userId = req.user.userId || req.user.id;
+
+    const chat = await Chat.findById(chatId).lean();
+    if (!chat) {
+      return res.status(404).json({ message: "Chat not found" });
+    }
+
+    // Verify membership
+    const isMember = chat.members.some(
+      (m) => m.toString() === userId.toString()
+    );
+    if (!isMember) {
+      return res.status(403).json({ message: "Not a member of this chat" });
+    }
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 100;
+    const skip = (page - 1) * limit;
+
+    const messages = await Message.find({ chatId })
+      .sort({ createdAt: 1 })
+      .skip(skip)
+      .limit(limit)
+      .populate("sender", "username email")
+      .lean();
+
+    const total = await Message.countDocuments({ chatId });
+
+    return res.status(200).json({
+      messages,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    });
+  } catch (error) {
+    console.error("Get Messages Error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ── Get online users (WebSocket presence) ────────────────────────────────
 const getOnlineUsers = async (req, res) => {
   try {
     const onlineList = [];
@@ -209,4 +245,12 @@ const getOnlineUsers = async (req, res) => {
   }
 };
 
-module.exports = { sendMessage, getMessages, createChat, getMyChats, getOnlineUsers };
+module.exports = {
+  sendMessage,
+  getMessages,
+  createChat,
+  getMyChats,
+  getWorkspaceChats,
+  getUserPublicKey,
+  getOnlineUsers,
+};

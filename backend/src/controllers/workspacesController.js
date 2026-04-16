@@ -125,7 +125,9 @@ const generateInviteLink = async (req, res) => {
         workspace.inviteTokenExpiry = inviteTokenExpiry;
         await workspace.save();
 
-        const inviteLink = `${req.protocol}://${req.get('host')}/api/workspaces/join/${inviteToken}`;
+        // Frontend-friendly invite link (not the API endpoint)
+        const frontendOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const inviteLink = `${frontendOrigin}/join/${inviteToken}`;
 
         // ✅ Optional email sending
         if (email) {

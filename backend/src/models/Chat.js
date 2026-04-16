@@ -10,7 +10,7 @@ const chatSchema = new mongoose.Schema(
     name: {
       type: String,
       trim: true,
-      default: "",            // Used for channels; DMs derive display name from members
+      default: "",
     },
     members: [
       {
@@ -29,6 +29,17 @@ const chatSchema = new mongoose.Schema(
     lastMessage: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Message",
+      default: null,
+    },
+    // Kyber KEM ciphertext — used by the receiver to derive the shared secret
+    kemCipherText: {
+      type: String,
+      default: null,
+    },
+    // Who performed the encapsulation (the other member decapsulates)
+    initiator: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
       default: null,
     },
   },
