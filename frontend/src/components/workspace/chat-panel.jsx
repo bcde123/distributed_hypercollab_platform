@@ -15,6 +15,7 @@ import {
   WifiOff,
   X,
   Lock,
+  CornerDownLeft,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -32,6 +33,8 @@ import {
   clearActiveChat,
 } from "@/features/chat/chatSlice"
 import { hasSharedSecret } from "@/crypto/keyStore"
+
+const MAX_MSG_LENGTH = 500
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -555,6 +558,7 @@ export function ChatPanel() {
 
   const handleSendMessage = useCallback(() => {
     if (!message.trim() || !activeChat || sendingMessage) return
+    if (message.length > MAX_MSG_LENGTH) return
 
     // Use Redux thunk for database persistence (handles encryption internally)
     dispatch(sendMessage({
@@ -571,7 +575,9 @@ export function ChatPanel() {
 
   const handleInputChange = useCallback(
     (e) => {
-      setMessage(e.target.value)
+      const val = e.target.value
+      if (val.length > MAX_MSG_LENGTH) return // hard cap
+      setMessage(val)
       if (!activeChat) return
 
       // Send typing indicator (debounced)
@@ -631,13 +637,19 @@ export function ChatPanel() {
             <h2 className="text-xl font-bold text-neutral-900">Messages</h2>
             <div className="flex items-center gap-1.5">
                {ws.isConnected?.current ? (
-                 <Wifi className="h-3.5 w-3.5 text-emerald-500" />
+                 <>
+                   <span className="relative flex h-2.5 w-2.5">
+                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                     <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+                   </span>
+                   <span className="text-[10px] text-emerald-600 font-medium">Live</span>
+                 </>
                ) : (
-                 <WifiOff className="h-3.5 w-3.5 text-red-400" />
+                 <>
+                   <WifiOff className="h-3.5 w-3.5 text-red-400" />
+                   <span className="text-[10px] text-red-400">Offline</span>
+                 </>
                )}
-               <span className="text-[10px] text-neutral-400">
-                 {ws.isConnected?.current ? "Live" : "Offline"}
-               </span>
             </div>
           </div>
 
@@ -790,23 +802,56 @@ export function ChatPanel() {
             </div>
 
             {/* Input */}
-            <div className="border-t border-neutral-200 bg-white px-6 py-4">
+            <div className="border-t border-neutral-200 bg-white px-6 py-3">
                <div className="flex items-end gap-2">
-                  <Button variant="ghost" size="icon" className="h-9 w-9 text-neutral-400 hover:text-indigo-600 transition-colors"><Paperclip className="h-5 w-5" /></Button>
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-neutral-400 hover:text-indigo-600 transition-colors flex-shrink-0">
+                    <Paperclip className="h-5 w-5" />
+                  </Button>
                   <div className="flex-1 relative">
                      <Input
                         value={message}
                         onChange={handleInputChange}
-                        onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSendMessage())}
-                        placeholder={activeChat.isEncrypted ? `🔒 Encrypted message to ${activeDisplayName}...` : `Message ${activeDisplayName}...`}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault()
+                            handleSendMessage()
+                          }
+                          if (e.key === "Escape") {
+                            setMessage("")
+                            ws.stopTyping(activeChat._id)
+                          }
+                        }}
+                        placeholder={activeChat.isEncrypted ? `🔒 Encrypted message to ${activeDisplayName}…` : `Message ${activeDisplayName}…`}
                         className="pr-10 h-10 text-sm border-neutral-200 focus:border-indigo-500 transition-all shadow-sm"
                         disabled={sendingMessage || keyDeriving}
                      />
-                     <button className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-indigo-600"><Smile className="h-5 w-5" /></button>
+                     <button className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-300 hover:text-indigo-500 transition-colors">
+                       <Smile className="h-5 w-5" />
+                     </button>
                   </div>
-                  <Button onClick={handleSendMessage} disabled={!message.trim() || sendingMessage || keyDeriving} className="bg-indigo-600 hover:bg-indigo-700 h-10 w-10 p-0 shadow-lg shadow-indigo-200">
+                  <Button
+                    onClick={handleSendMessage}
+                    disabled={!message.trim() || sendingMessage || keyDeriving || message.length > MAX_MSG_LENGTH}
+                    className="bg-indigo-600 hover:bg-indigo-700 h-10 w-10 p-0 shadow-sm flex-shrink-0"
+                  >
                      {sendingMessage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   </Button>
+               </div>
+               {/* Footer row: char counter + hint */}
+               <div className="flex items-center justify-between mt-1.5 px-0.5">
+                 <span className="text-[10px] text-neutral-300 flex items-center gap-1">
+                   <CornerDownLeft className="h-2.5 w-2.5" /> Enter to send · Esc to clear
+                 </span>
+                 <span className={cn(
+                   "text-[10px] font-medium tabular-nums transition-colors",
+                   message.length > MAX_MSG_LENGTH * 0.9
+                     ? "text-red-500"
+                     : message.length > MAX_MSG_LENGTH * 0.75
+                     ? "text-amber-500"
+                     : "text-neutral-300"
+                 )}>
+                   {message.length > 0 ? `${message.length}/${MAX_MSG_LENGTH}` : ""}
+                 </span>
                </div>
             </div>
           </>

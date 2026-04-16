@@ -23,7 +23,15 @@ export default function App() {
       ) : (
         <AppRouter />
       )}
-      <Toaster richColors position="top-right" />
+      <Toaster
+        richColors
+        position="bottom-right"
+        toastOptions={{
+          style: { fontFamily: "'Inter', system-ui, sans-serif" },
+          className: "shadow-lg",
+        }}
+        closeButton
+      />
     </>
   );
 }

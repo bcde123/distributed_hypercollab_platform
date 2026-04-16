@@ -1,9 +1,10 @@
 import React, { useState } from "react"
 import { useSelector, useDispatch } from "react-redux"
 import { Button } from "@/components/ui/button"
-import { UserPlus, MoreVertical, Shield, ShieldAlert, ShieldCheck, UserX } from "lucide-react"
+import { UserPlus, MoreVertical, Shield, ShieldAlert, ShieldCheck, UserX, Crown } from "lucide-react"
 import { updateMemberRole, removeMember, generateInviteLink } from "@/features/workspace/workspaceThunks"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 
 export function MembersList() {
   const dispatch = useDispatch()
@@ -45,17 +46,40 @@ export function MembersList() {
     }
   }
 
-  const handleRemoveMember = async (userId) => {
-    if (!window.confirm("Are you sure you want to remove this member?")) return
-    setActiveMenuId(null)
-    try {
-      await dispatch(
-        removeMember({ workspaceId: workspace._id, userId })
-      ).unwrap()
-      toast.success("Member removed")
-    } catch (err) {
-      toast.error("Failed to remove member", { description: err })
-    }
+  const handleRemoveMember = async (userId, username) => {
+    // Toast-based confirm instead of native window.confirm
+    toast.custom(
+      (t) => (
+        <div className="bg-white rounded-xl border border-neutral-200 shadow-xl p-4 w-80">
+          <p className="text-sm font-semibold text-neutral-900 mb-1">Remove {username}?</p>
+          <p className="text-xs text-neutral-500 mb-4">This member will lose access to the workspace immediately.</p>
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => toast.dismiss(t)}
+              className="text-xs px-3 py-1.5 rounded-lg border border-neutral-200 text-neutral-600 hover:bg-neutral-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={async () => {
+                toast.dismiss(t)
+                setActiveMenuId(null)
+                try {
+                  await dispatch(removeMember({ workspaceId: workspace._id, userId })).unwrap()
+                  toast.success("Member removed")
+                } catch (err) {
+                  toast.error("Failed to remove member", { description: err })
+                }
+              }}
+              className="text-xs px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      ),
+      { duration: Infinity }
+    )
   }
 
   return (
@@ -85,28 +109,39 @@ export function MembersList() {
             const isSelf = member.user._id === currentUser?._id
             
             return (
-              <li key={member.user._id} className="flex items-center justify-between p-4 hover:bg-neutral-50 relative">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 font-medium text-indigo-700">
+              <li key={member.user._id} className="flex items-center justify-between p-4 hover:bg-neutral-50/80 relative transition-colors">
+                <div className="flex items-center gap-3.5">
+                  <div className={cn(
+                    "flex h-10 w-10 items-center justify-center rounded-full font-semibold text-sm",
+                    isOwner
+                      ? "bg-amber-100 text-amber-700"
+                      : "bg-indigo-100 text-indigo-700"
+                  )}>
                     {member.user.username ? member.user.username.slice(0, 2).toUpperCase() : member.user.email.slice(0, 2).toUpperCase()}
                   </div>
                   <div>
-                    <p className="font-medium text-neutral-900 group flex items-center gap-2">
+                    <p className="font-medium text-sm text-neutral-900 flex items-center gap-2">
                       {member.user.username || "Unknown"}
-                      {isSelf && <span className="text-xs bg-indigo-100 text-indigo-700 py-0.5 px-2 rounded-full font-semibold">You</span>}
+                      {isSelf && <span className="text-[10px] bg-indigo-100 text-indigo-700 py-0.5 px-2 rounded-full font-semibold">You</span>}
                     </p>
-                    <p className="text-sm text-neutral-500">{member.user.email}</p>
+                    <p className="text-xs text-neutral-400">{member.user.email}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-4 relative">
-                  
+                <div className="flex items-center gap-3 relative">
                   {isOwner && (
-                    <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
-                      Owner
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+                      <Crown className="h-3 w-3" /> Owner
                     </span>
                   )}
                   {!isOwner && (
-                    <span className="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-neutral-800 capitalize">
+                    <span className={cn(
+                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize border",
+                      member.role === "admin"
+                        ? "bg-violet-50 text-violet-700 border-violet-200"
+                        : member.role === "viewer"
+                        ? "bg-sky-50 text-sky-700 border-sky-200"
+                        : "bg-neutral-50 text-neutral-600 border-neutral-200"
+                    )}>
                       {member.role}
                     </span>
                   )}
@@ -144,7 +179,7 @@ export function MembersList() {
                           </button>
                           <hr className="my-1 border-neutral-200" />
                           <button
-                            onClick={() => handleRemoveMember(member.user._id)}
+                            onClick={() => handleRemoveMember(member.user._id, member.user.username || "this member")}
                             className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                           >
                             <UserX className="mr-2 h-4 w-4 text-red-600" /> Remove Member
@@ -154,13 +189,12 @@ export function MembersList() {
                     </div>
                   )}
 
-                  {/* Even if not admin, users can remove themselves unless they are owner */}
                   {!canManageMembers && isSelf && !isOwner && (
                      <Button 
                         variant="ghost" 
                         size="sm" 
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        onClick={() => handleRemoveMember(member.user._id)}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 text-xs"
+                        onClick={() => handleRemoveMember(member.user._id, "yourself")}
                       >
                        Leave Workspace
                      </Button>

@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react"
+import { Plus, LayoutGrid } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { BoardCard } from "@/components/workspace/board-card"
 import { Sidebar } from "@/components/workspace/sidebar"
@@ -13,6 +13,39 @@ import { useWs } from "@/context/WebSocketProvider"
 
 import { getBoardsByWorkspace, createBoard } from "@/features/board/boardThunks"
 import { getWorkspaceBySlug } from "@/features/workspace/workspaceThunks"
+
+// ── Skeleton loader for board cards ──────────────────────────────────────
+function BoardCardSkeleton() {
+  return (
+    <div className="bg-white rounded-xl border border-neutral-200 p-5 space-y-3 shadow-sm">
+      <div className="skeleton h-5 w-3/5 rounded" />
+      <div className="skeleton h-4 w-full rounded" />
+      <div className="skeleton h-4 w-4/5 rounded" />
+      <div className="flex justify-between mt-4">
+        <div className="skeleton h-3.5 w-16 rounded" />
+        <div className="skeleton h-3.5 w-20 rounded" />
+      </div>
+    </div>
+  )
+}
+
+// ── Empty state when no boards exist ─────────────────────────────────────
+function EmptyBoardsState({ onCreateBoard }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-24 text-center">
+      <div className="h-20 w-20 rounded-2xl bg-indigo-50 flex items-center justify-center mb-5 shadow-sm">
+        <LayoutGrid className="h-10 w-10 text-indigo-400" />
+      </div>
+      <h3 className="text-xl font-semibold text-neutral-800 mb-2">No boards yet</h3>
+      <p className="text-sm text-neutral-500 mb-6 max-w-sm">
+        Boards help you organise tasks and track progress across your team. Create your first one to get started.
+      </p>
+      <Button className="bg-indigo-600 hover:bg-indigo-700 shadow-sm" onClick={onCreateBoard}>
+        <Plus className="mr-2 h-4 w-4" /> Create your first board
+      </Button>
+    </div>
+  )
+}
 
 export default function WorkspacePage() {
   const dispatch = useDispatch()
@@ -100,13 +133,15 @@ export default function WorkspacePage() {
               )}
             </div>
 
-            {loading && <div>Loading boards...</div>}
-            {error && <div className="text-red-500">{error}</div>}
+            {loading && (
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {[1,2,3,4,5,6].map((i) => <BoardCardSkeleton key={i} />)}
+              </div>
+            )}
+            {error && <div className="text-red-500 text-sm">{error}</div>}
 
             {!loading && boards.length === 0 && (
-              <div className="text-neutral-500">
-                No boards yet. Create your first board.
-              </div>
+              <EmptyBoardsState onCreateBoard={() => setIsBoardModalOpen(true)} />
             )}
 
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
