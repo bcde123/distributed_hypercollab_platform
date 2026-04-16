@@ -11,3 +11,6 @@ bin/
 
 # System
 .DS_Store
+
+# Docker
+.docker/

@@ -13,7 +13,9 @@ import {
   ws_boardCreated,
 } from "@/features/board/boardSlice";
 
-const WS_URL = "ws://localhost:5001/ws";
+const WS_URL = import.meta.env.PROD 
+  ? `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws` 
+  : "ws://localhost:5001/ws";
 const RECONNECT_DELAYS = [1000, 2000, 4000, 8000, 16000]; // Exponential backoff
 
 /**

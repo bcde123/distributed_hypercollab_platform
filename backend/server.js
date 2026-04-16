@@ -14,10 +14,19 @@ const { initWebSocketServer } = require('./src/websocket/socketServer');
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// Middleware
+// CORS — read allowed origins from env so the same image works locally and in Docker.
+// CORS_ORIGIN can be a comma-separated list, e.g. "http://localhost,http://localhost:5173"
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
+  .split(',')
+  .map(o => o.trim());
+
 app.use(cors({
-  origin: "http://localhost:5173",
-  credentials: true
+  origin: (origin, callback) => {
+    // Allow requests with no origin (curl, Postman, server-to-server)
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS: origin ${origin} not allowed`));
+  },
+  credentials: true,
 }));
 
 app.use(express.json());
@@ -52,7 +61,17 @@ app.use('/api/workspaces/:workspaceId/analytics', analyticsRoutes);
 // chat
 app.use("/api/chat", chatRoutes);
 
-// Basic route
+// Health check — used by docker-compose healthcheck and uptime monitors
+app.get('/health', (req, res) => {
+    const dbState = mongoose.connection.readyState; // 1 = connected
+    if (dbState === 1) {
+        res.json({ status: 'ok', db: 'connected' });
+    } else {
+        res.status(503).json({ status: 'degraded', db: 'disconnected' });
+    }
+});
+
+// Basic root route
 app.get('/', (req, res) => {
     res.send('HyperCollab API is running');
 });
